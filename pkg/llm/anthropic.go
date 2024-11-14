@@ -61,17 +61,33 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 }
 
 func buildPrompt(changes string) string {
-	return fmt.Sprintf(`Generate 3 different commit messages for the following changes. 
-Follow the Conventional Commits format (type(scope): description).
-Each suggestion should be on a new line, prefixed with a number and a dash (e.g., "1 - feat:").
-After each suggestion, add a brief explanation of why this message is appropriate.
+	return fmt.Sprintf(`Generate 3 different commit messages for the following changes following these strict git commit best practices:
+
+1. Use imperative mood ("Add" not "Added" or "Adds")
+2. First line should be 50 chars or less
+3. First line should be capitalized
+4. No period at the end of the first line
+5. Leave second line blank
+6. Wrap subsequent lines at 72 characters
+7. Use the body to explain what and why vs. how
+
+Follow the Conventional Commits format: type(scope): description
+
+Types:
+- feat: new feature
+- fix: bug fix
+- docs: documentation only
+- style: formatting, missing semi colons, etc
+- refactor: code change that neither fixes a bug nor adds a feature
+- test: adding missing tests
+- chore: maintain
 
 Changes:
 %s
 
 Format each suggestion as:
 <number> - <commit message>
-Explanation: <why this message is appropriate>`, changes)
+Explanation: <why this message is appropriate, focusing on motivation and impact>`, changes)
 }
 
 func parseResponse(response string) []CommitSuggestion {

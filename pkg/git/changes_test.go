@@ -200,4 +200,121 @@ func TestCommitChangesErrors(t *testing.T) {
 
 	err = CommitChanges("test commit")
 	assert.Error(t, err)
+}
+
+func TestGetGitConfig(t *testing.T) {
+	dir, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	err := os.Chdir(dir)
+	assert.NoError(t, err)
+
+	// Set up test git config
+	repo, err := git.PlainOpen(".")
+	assert.NoError(t, err)
+
+	cfg, err := repo.Config()
+	assert.NoError(t, err)
+
+	cfg.User.Name = "Test User"
+	cfg.User.Email = "test@example.com"
+
+	err = repo.SetConfig(cfg)
+	assert.NoError(t, err)
+
+	// Test getting config
+	config, err := GetGitConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, "Test User", config.Name)
+	assert.Equal(t, "test@example.com", config.Email)
+}
+
+func TestCommitChangesWithConfig(t *testing.T) {
+	dir, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	err := os.Chdir(dir)
+	assert.NoError(t, err)
+
+	// Set up test git config
+	repo, err := git.PlainOpen(".")
+	assert.NoError(t, err)
+
+	cfg, err := repo.Config()
+	assert.NoError(t, err)
+
+	cfg.User.Name = "Test User"
+	cfg.User.Email = "test@example.com"
+
+	err = repo.SetConfig(cfg)
+	assert.NoError(t, err)
+
+	// Create and stage a test file
+	err = os.WriteFile("test.txt", []byte("test content"), 0644)
+	assert.NoError(t, err)
+
+	w, err := repo.Worktree()
+	assert.NoError(t, err)
+	_, err = w.Add("test.txt")
+	assert.NoError(t, err)
+
+	// Test commit with config
+	err = CommitChanges("test commit")
+	assert.NoError(t, err)
+
+	// Verify commit author
+	head, err := repo.Head()
+	assert.NoError(t, err)
+
+	commit, err := repo.CommitObject(head.Hash())
+	assert.NoError(t, err)
+
+	assert.Equal(t, "Test User", commit.Author.Name)
+	assert.Equal(t, "test@example.com", commit.Author.Email)
+}
+
+func TestParseGitConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		wantName string
+		wantEmail string
+	}{
+		{
+			name: "simple config",
+			content: `[user]
+	name = John Doe
+	email = john@example.com`,
+			wantName: "John Doe",
+			wantEmail: "john@example.com",
+		},
+		{
+			name: "quoted values",
+			content: `[user]
+	name = "John Doe"
+	email = "john@example.com"`,
+			wantName: "John Doe",
+			wantEmail: "john@example.com",
+		},
+		{
+			name: "with other sections",
+			content: `[core]
+	editor = vim
+[user]
+	name = John Doe
+	email = john@example.com
+[alias]
+	st = status`,
+			wantName: "John Doe",
+			wantEmail: "john@example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, email := parseGitConfig(tt.content)
+			assert.Equal(t, tt.wantName, name)
+			assert.Equal(t, tt.wantEmail, email)
+		})
+	}
 } 
