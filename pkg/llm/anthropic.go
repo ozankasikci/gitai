@@ -15,6 +15,10 @@ type CommitSuggestion struct {
 	Explanation string
 }
 
+type CommitMessageGenerator interface {
+	GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error)
+}
+
 type Client struct {
 	client *anthropic.Client
 }
@@ -73,7 +77,7 @@ Explanation: <why this message is appropriate>`, changes)
 func parseResponse(response string) []CommitSuggestion {
 	var suggestions []CommitSuggestion
 	lines := strings.Split(response, "\n")
-
+	
 	var currentSuggestion *CommitSuggestion
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -87,11 +91,11 @@ func parseResponse(response string) []CommitSuggestion {
 				suggestions = append(suggestions, *currentSuggestion)
 			}
 			currentSuggestion = &CommitSuggestion{
-				Message: strings.TrimSpace(line[3:]), // Remove the "N - " prefix
+				Message: strings.TrimSpace(strings.SplitN(line, "-", 2)[1]), // Remove number and dash
 			}
 		} else if strings.HasPrefix(strings.ToLower(line), "explanation:") {
 			if currentSuggestion != nil {
-				currentSuggestion.Explanation = strings.TrimSpace(line[11:])
+				currentSuggestion.Explanation = strings.TrimSpace(strings.TrimPrefix(line, "Explanation:"))
 			}
 		}
 	}

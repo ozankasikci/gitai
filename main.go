@@ -13,6 +13,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var osExit = os.Exit
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: Error loading .env file: %v", err)
@@ -105,4 +107,8 @@ func main() {
 	} else {
 		fmt.Println("Commit cancelled")
 	}
+}
+
+func generateCommitMessages(generator llm.CommitMessageGenerator, changes string) ([]llm.CommitSuggestion, error) {
+	return generator.GenerateCommitSuggestions(changes)
 } 
