@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -10,12 +11,15 @@ import (
 	"commit-ai/pkg/git"
 	"commit-ai/pkg/llm"
 	"github.com/joho/godotenv"
-	"bufio"
 )
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Warning: Error loading .env file: %v", err)
+	}
+
+	if os.Getenv("ANTHROPIC_API_KEY") == "" {
+		log.Fatal("ANTHROPIC_API_KEY is required in .env file")
 	}
 
 	// Get staged changes
@@ -59,32 +63,44 @@ func main() {
 		fmt.Printf("   Explanation: %s\n", suggestion.Explanation)
 	}
 
-	// Get user choice
-	fmt.Printf("\nSelect a message (1-%d) or 'e' to edit: ", len(suggestions))
-	var choice string
-	fmt.Scanln(&choice)
-
+	// Get user choice with input validation
 	var commitMessage string
-	if choice == "e" {
-		fmt.Print("Enter your commit message: ")
-		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Scan()
-		commitMessage = scanner.Text()
-	} else {
-		index, err := strconv.Atoi(choice)
-		if err != nil || index < 1 || index > len(suggestions) {
-			log.Fatal("Invalid selection")
+	for {
+		fmt.Printf("\nSelect a message (1-%d) or 'e' to edit, 'q' to quit: ", len(suggestions))
+		reader := bufio.NewReader(os.Stdin)
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		if choice == "q" {
+			fmt.Println("Operation cancelled")
+			return
 		}
-		commitMessage = suggestions[index-1].Message
+
+		if choice == "e" {
+			fmt.Print("Enter your commit message: ")
+			message, _ := reader.ReadString('\n')
+			commitMessage = strings.TrimSpace(message)
+			break
+		}
+
+		if index, err := strconv.Atoi(choice); err == nil && index >= 1 && index <= len(suggestions) {
+			commitMessage = suggestions[index-1].Message
+			break
+		}
+
+		fmt.Println("Invalid selection, please try again")
 	}
 
 	// Confirm commit
 	fmt.Printf("\nCommit with message:\n%s\n\nProceed? (y/n): ", commitMessage)
-	var confirm string
-	fmt.Scanln(&confirm)
+	reader := bufio.NewReader(os.Stdin)
+	confirm, _ := reader.ReadString('\n')
+	confirm = strings.TrimSpace(strings.ToLower(confirm))
 
-	if strings.ToLower(confirm) == "y" {
-		// TODO: Implement git commit
+	if confirm == "y" {
+		if err := git.CommitChanges(commitMessage); err != nil {
+			log.Fatalf("Error committing changes: %v", err)
+		}
 		fmt.Println("Changes committed successfully!")
 	} else {
 		fmt.Println("Commit cancelled")
