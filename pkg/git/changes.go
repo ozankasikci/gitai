@@ -1,10 +1,9 @@
 package git
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,19 +14,19 @@ import (
 )
 
 type StagedChange struct {
-	Path     string
-	Status   string
-	FileType string
-	Content  string
-	Summary  string
+	Path       string
+	Status     string
+	FileType   string
+	Content    string
+	Summary    string
 	IsTestFile bool
-	Package  string
+	Package    string
 }
 
 // GetStagedChanges returns a list of files that are staged for commit
 func GetStagedChanges() ([]StagedChange, error) {
 	logger.Infof("Getting staged changes...")
-	
+
 	repo, err := git.PlainOpen(".")
 	if err != nil {
 		logger.Errorf("Failed to open git repository: %v", err)
@@ -92,80 +91,34 @@ func FormatChangesForPrompt(changes []StagedChange) string {
 		builder.WriteString(fmt.Sprintf("%s (%s)\n", change.Path, change.Status))
 	}
 	return builder.String()
-} 
+}
 
 // GetStagedContent returns a summary of the staged changes
 func GetStagedContent() (string, error) {
-	repo, err := git.PlainOpen(".")
+	// Get list of staged files first
+	cmd := exec.Command("git", "diff", "--staged", "--name-only")
+	files, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to open git repository: %w", err)
+		return "", fmt.Errorf("failed to get staged files: %w", err)
 	}
 
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return "", fmt.Errorf("failed to get worktree: %w", err)
-	}
+	var allDiffs strings.Builder
+	allDiffs.WriteString("=== Changes across multiple files ===\n\n")
 
-	status, err := worktree.Status()
-	if err != nil {
-		return "", fmt.Errorf("failed to get status: %w", err)
-	}
-
-	var summary bytes.Buffer
-	for path, fileStatus := range status {
-		if fileStatus.Staging == git.Unmodified {
+	// Get diff for each file
+	for _, file := range strings.Split(strings.TrimSpace(string(files)), "\n") {
+		cmd := exec.Command("git", "diff", "--staged", file)
+		diff, err := cmd.Output()
+		if err != nil {
 			continue
 		}
-
-		summary.WriteString(fmt.Sprintf("File: %s\n", path))
-		summary.WriteString(fmt.Sprintf("Status: %s\n", statusToString(fileStatus.Staging)))
-
-		// Handle different types of changes
-		switch fileStatus.Staging {
-		case git.Added:
-			// For new files, show the entire content
-			f, err := worktree.Filesystem.Open(path)
-			if err != nil {
-				continue
-			}
-			content, err := io.ReadAll(f)
-			f.Close()
-			if err != nil {
-				continue
-			}
-			summary.WriteString("New file content (first 500 chars):\n")
-			if len(content) > 500 {
-				summary.Write(content[:500])
-				summary.WriteString("...[truncated]")
-			} else {
-				summary.Write(content)
-			}
-			summary.WriteString("\n")
-
-		case git.Modified:
-			// For modified files, show current content
-			f, err := worktree.Filesystem.Open(path)
-			if err != nil {
-				continue
-			}
-			content, err := io.ReadAll(f)
-			f.Close()
-			if err != nil {
-				continue
-			}
-			summary.WriteString("Modified file content (first 500 chars):\n")
-			if len(content) > 500 {
-				summary.Write(content[:500])
-				summary.WriteString("...[truncated]")
-			} else {
-				summary.Write(content)
-			}
-			summary.WriteString("\n")
-		}
-		summary.WriteString("\n---\n")
+		
+		allDiffs.WriteString(fmt.Sprintf("=== Changes in %s ===\n", file))
+		allDiffs.WriteString(string(diff))
+		allDiffs.WriteString("\n")
 	}
 
-	return summary.String(), nil
+	return allDiffs.String(), nil
 }
 
 // CommitChanges commits the staged changes with the given message
@@ -327,4 +280,4 @@ func detectGoPackage(content string) string {
 		}
 	}
 	return ""
-} 
+}

@@ -78,6 +78,7 @@ func buildPrompt(changes string) string {
 
 Summarizes the purpose of the changes.
 Highlights any key modifications or additions.
+Creates a unified message that captures changes across all modified files.
 	
 	Analyze the following git diff and generate 3 different commit messages.
 
@@ -85,8 +86,9 @@ First, carefully analyze the diff:
 - Lines starting with '-' show REMOVED content
 - Lines starting with '+' show ADDED content
 - Context lines (without + or -) show where in the file the change occurs
-- Pay attention to the file paths and component names
-- For each change, compare the old and new versions to understand what changed
+- Consider how changes in different files relate to each other
+- Look for common themes or purposes across all changes
+- Create messages that capture the complete scope of changes
 
 Follow these git commit message rules:
 1. Use imperative mood ("Add" not "Added" or "Adds")
@@ -96,7 +98,7 @@ Follow these git commit message rules:
 5. Leave second line blank
 6. Wrap subsequent lines at 72 characters
 
-Use the appropriate Conventional Commits prefix based on the diff analysis:
+Only use these Conventional Commits prefixes when the change clearly fits the category:
 - feat: new feature (entirely new functionality)
 - fix: bug fix (correcting incorrect behavior)
 - docs: documentation only
@@ -105,11 +107,19 @@ Use the appropriate Conventional Commits prefix based on the diff analysis:
 - test: adding missing tests
 - chore: maintain
 
+If the change doesn't clearly fit into one of these categories, omit the prefix.
+
+Important: Each commit message should cover ALL changes across different files in a single line.
+Do not split changes into separate parts or lines.
+
 Changes:
 %s
 
 Format each suggestion as:
-<number> - <commit message>`, changes)
+<number> - <commit message>
+
+Request combined messages.
+`, changes)
 }
 
 func parseResponse(response string) []CommitSuggestion {
@@ -125,20 +135,34 @@ func parseResponse(response string) []CommitSuggestion {
 
 		// Check if this is a new suggestion line (starts with a number)
 		if len(line) > 2 && line[0] >= '1' && line[0] <= '9' && line[1] == ' ' {
+			// If we have a previous suggestion, add it before starting new one
 			if currentSuggestion != nil {
 				suggestions = append(suggestions, *currentSuggestion)
 			}
-			currentSuggestion = &CommitSuggestion{
-				Message: strings.TrimSpace(strings.SplitN(line, "-", 2)[1]), // Remove number and dash
+			// Extract just the message part after the number and dash
+			parts := strings.SplitN(line, "-", 2)
+			if len(parts) == 2 {
+				currentSuggestion = &CommitSuggestion{
+					Message: strings.TrimSpace(parts[1]),
+				}
 			}
-		} else if strings.HasPrefix(strings.ToLower(line), "explanation:") {
-			if currentSuggestion != nil {
+		} else if currentSuggestion != nil {
+			// Check for explanation or descriptive text markers
+			lowercaseLine := strings.ToLower(line)
+			if strings.HasPrefix(lowercaseLine, "explanation:") {
 				currentSuggestion.Explanation = strings.TrimSpace(strings.TrimPrefix(line, "Explanation:"))
+			} else if strings.Contains(lowercaseLine, "message captures") ||
+					  strings.Contains(lowercaseLine, "changes show") ||
+					  strings.Contains(lowercaseLine, "the first") ||
+					  strings.Contains(lowercaseLine, "the second") ||
+					  strings.Contains(lowercaseLine, "the third") {
+				// Stop processing message when we hit explanatory text
+				continue
 			}
 		}
 	}
 
-	// Add the last suggestion if exists
+	// Add the last suggestion if it exists
 	if currentSuggestion != nil {
 		suggestions = append(suggestions, *currentSuggestion)
 	}
