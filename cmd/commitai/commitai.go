@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 	"github.com/ozankasikci/commit-ai/pkg/git"
@@ -17,6 +18,35 @@ import (
 var osExit = os.Exit
 
 func init() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		logger.Errorf("Failed to get user home directory: %v", err)
+		return
+	}
+
+	configDir := filepath.Join(home, ".config", "commitai")
+	envFile := filepath.Join(configDir, ".env")
+
+	// Create config directory if it doesn't exist
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		logger.Errorf("Failed to create config directory: %v", err)
+		return
+	}
+
+	// Ensure .env file has secure permissions
+	if _, err := os.Stat(envFile); err == nil {
+		if err := os.Chmod(envFile, 0600); err != nil {
+			logger.Errorf("Failed to set .env file permissions: %v", err)
+		}
+	}
+
+	// Load .env from config directory
+	if err := godotenv.Load(envFile); err != nil {
+		logger.Debugf("No .env file found in config directory: %v", err)
+	} else {
+		logger.Debugf("Successfully loaded .env from config directory")
+	}
+
 	// Initialize logger with default settings
 	logger.Init(false)
 }
@@ -33,12 +63,6 @@ func main() {
 
 	logger.Infof("Starting commit-ai...")
 	logger.Debugf("Verbose mode: %v", *verbose)
-
-	if err := godotenv.Load(); err != nil {
-		logger.Errorf("Warning: Error loading .env file: %v", err)
-	} else {
-		logger.Debugf("Successfully loaded .env file")
-	}
 
 	changes, err := git.GetStagedChanges()
 	if err != nil {

@@ -3,3 +3,5 @@
 test-repo
 commit-ai
 !cmd/*
+.DS_Store
+cmd/.DS_Store
