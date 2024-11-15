@@ -2,3 +2,4 @@
 .idea
 test-repo
 commit-ai
+!cmd/*
