@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 
-	"github.com/ozankasikci/gitai/pkg/git"
-	"github.com/ozankasikci/gitai/pkg/llm"
-	"github.com/ozankasikci/gitai/pkg/logger"
+	"github.com/ozankasikci/gitai/internal/git"
+	"github.com/ozankasikci/gitai/internal/llm"
+	"github.com/ozankasikci/gitai/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -56,21 +57,29 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prompt user to select a message
-	var selection int
-	fmt.Printf("\nSelect a commit message (1-%d) or 0 to cancel: ", len(suggestions))
-	fmt.Scanln(&selection)
+	fmt.Printf("\nSelect a commit message (1-%d), 0 to cancel, or type your own message: ", len(suggestions))
+	var input string
+	fmt.Scanln(&input)
 
-	if selection == 0 {
-		fmt.Println("Commit cancelled")
-		return nil
+	var selectedMessage string
+	selection, err := strconv.Atoi(input)
+	if err != nil {
+		// If input isn't a number, use it as the commit message
+		selectedMessage = input
+	} else {
+		if selection == 0 {
+			fmt.Println("Commit cancelled")
+			return nil
+		}
+
+		if selection < 1 || selection > len(suggestions) {
+			return fmt.Errorf("invalid selection: %d", selection)
+		}
+
+		selectedMessage = suggestions[selection-1].Message
 	}
 
-	if selection < 1 || selection > len(suggestions) {
-		return fmt.Errorf("invalid selection: %d", selection)
-	}
-
-	// Apply the selected commit message
-	selectedMessage := suggestions[selection-1].Message
+	// Apply the commit message
 	err = git.CommitChanges(selectedMessage)
 	if err != nil {
 		return fmt.Errorf("failed to commit changes: %w", err)

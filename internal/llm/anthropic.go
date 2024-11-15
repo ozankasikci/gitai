@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
-	"github.com/ozankasikci/gitai/pkg/logger"
+	"github.com/ozankasikci/gitai/internal/logger"
 )
 
 type CommitSuggestion struct {
