@@ -52,9 +52,13 @@ func TestGetStagedChanges(t *testing.T) {
 	// Test GetStagedChanges
 	changes, err := GetStagedChanges()
 	assert.NoError(t, err)
-	assert.Len(t, changes, 1)
-	assert.Equal(t, "test.txt", changes[0].Path)
-	assert.Equal(t, "added", changes[0].Status)
+	assert.Len(t, changes, 1, "Should only detect one staged file")
+	
+	// Verify only staged files are included
+	for _, change := range changes {
+		assert.Equal(t, "test.txt", change.Path)
+		assert.Equal(t, "added", change.Status)
+	}
 }
 
 func TestGetStagedContent(t *testing.T) {
@@ -148,31 +152,40 @@ func TestGetStagedChangesMultipleFiles(t *testing.T) {
 		"modified.txt": "initial content",
 	}
 
-	for name, content := range files {
-		err := os.WriteFile(name, []byte(content), 0644)
-		assert.NoError(t, err)
-	}
-
+	// Create and stage the initial files
 	repo, err := git.PlainOpen(".")
 	assert.NoError(t, err)
 	w, err := repo.Worktree()
 	assert.NoError(t, err)
 
-	// Stage all files
-	for name := range files {
+	// Create and stage files one by one
+	for name, content := range files {
+		err := os.WriteFile(name, []byte(content), 0644)
+		assert.NoError(t, err)
 		_, err = w.Add(name)
 		assert.NoError(t, err)
 	}
 
-	// Modify one file after staging
-	err = os.WriteFile("modified.txt", []byte("modified content"), 0644)
+	// Create an untracked file that shouldn't be included
+	err = os.WriteFile("untracked.txt", []byte("untracked content"), 0644)
 	assert.NoError(t, err)
-	_, err = w.Add("modified.txt")
-	assert.NoError(t, err)
+	// Explicitly NOT staging untracked.txt
 
 	changes, err := GetStagedChanges()
 	assert.NoError(t, err)
-	assert.Len(t, changes, 2)
+	assert.Len(t, changes, 2, "Should only detect two staged files")
+	
+	// Verify only staged files are included and have correct status
+	expectedChanges := map[string]string{
+		"added.txt":    "added",
+		"modified.txt": "added",
+	}
+	
+	for _, change := range changes {
+		expectedStatus, exists := expectedChanges[change.Path]
+		assert.True(t, exists, "Found unexpected file: %s", change.Path)
+		assert.Equal(t, expectedStatus, change.Status, "Incorrect status for %s", change.Path)
+	}
 }
 
 func TestGetStagedContentErrors(t *testing.T) {

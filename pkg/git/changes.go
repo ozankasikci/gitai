@@ -41,8 +41,8 @@ func GetStagedChanges() ([]StagedChange, error) {
 
 	var changes []StagedChange
 	for path, fileStatus := range status {
-		// Check if file is staged
-		if fileStatus.Staging != git.Unmodified {
+		// Only include files that are actually staged
+		if fileStatus.Staging != git.Unmodified && fileStatus.Staging != git.Untracked {
 			change := StagedChange{
 				Path:   path,
 				Status: statusToString(fileStatus.Staging),
