@@ -73,33 +73,43 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 }
 
 func buildPrompt(changes string) string {
-	return fmt.Sprintf(`Generate 3 different commit messages for the following changes following these strict git commit best practices:
+	return fmt.Sprintf(`
+	You are a highly intelligent assistant skilled in understanding code changes. I will provide you with a git diff. Your task is to analyze the changes and generate a concise and descriptive commit message that:
 
+Summarizes the purpose of the changes.
+Highlights any key modifications or additions.
+	
+	Analyze the following git diff and generate 3 different commit messages.
+
+First, carefully analyze the diff:
+- Lines starting with '-' show REMOVED content
+- Lines starting with '+' show ADDED content
+- Context lines (without + or -) show where in the file the change occurs
+- Pay attention to the file paths and component names
+- For each change, compare the old and new versions to understand what changed
+
+Follow these git commit message rules:
 1. Use imperative mood ("Add" not "Added" or "Adds")
 2. First line should be 50 chars or less
 3. First line should be capitalized
 4. No period at the end of the first line
 5. Leave second line blank
 6. Wrap subsequent lines at 72 characters
-7. Use the body to explain what and why vs. how
 
-Optionally use the Conventional Commits format (type(scope): description) if the change fits one of these types:
-- feat: new feature
-- fix: bug fix
+Use the appropriate Conventional Commits prefix based on the diff analysis:
+- feat: new feature (entirely new functionality)
+- fix: bug fix (correcting incorrect behavior)
 - docs: documentation only
 - style: formatting, missing semi colons, etc
 - refactor: code change that neither fixes a bug nor adds a feature
 - test: adding missing tests
 - chore: maintain
 
-If the change doesn't fit these types, write a direct descriptive message without a type prefix.
-
 Changes:
 %s
 
 Format each suggestion as:
-<number> - <commit message>
-Explanation: <why this message is appropriate, focusing on motivation and impact>`, changes)
+<number> - <commit message>`, changes)
 }
 
 func parseResponse(response string) []CommitSuggestion {
