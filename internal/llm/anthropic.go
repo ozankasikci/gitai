@@ -41,7 +41,7 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 	logger.Debugf("\n=== Full prompt being sent to LLM ===\n%s\n", prompt)
 
 	msg, err := c.client.Messages.New(context.Background(), anthropic.MessageNewParams{
-		Model:     anthropic.F(anthropic.Model("claude-3-5-sonnet-20241022")),
+		Model:     anthropic.F(anthropic.Model("claude-3-5-haiku-latest")),
 		MaxTokens: anthropic.F(int64(1024)),
 		Messages: anthropic.F([]anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),

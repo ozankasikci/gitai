@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/ozankasikci/gitai/internal/git"
@@ -58,8 +60,12 @@ func runCommit(cmd *cobra.Command, args []string) error {
 
 	// Prompt user to select a message
 	fmt.Printf("\nSelect a commit message (1-%d), 0 to cancel, or type your own message: ", len(suggestions))
-	var input string
-	fmt.Scanln(&input)
+	
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		return fmt.Errorf("failed to read input")
+	}
+	input := scanner.Text()
 
 	var selectedMessage string
 	selection, err := strconv.Atoi(input)
