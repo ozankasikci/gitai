@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"bufio"
 	"fmt"
 	"log"
@@ -11,12 +12,28 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/ozankasikci/commit-ai/pkg/git"
 	"github.com/ozankasikci/commit-ai/pkg/llm"
+	"github.com/ozankasikci/commit-ai/pkg/logger"
 )
 
 var osExit = os.Exit
+
+func init() {
+	// Initialize logger with default settings
+	logger.Init(false)
+}
+
 func main() {
+	// Parse flags
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
+	flag.Parse()
+
+	// Re-initialize logger with verbose setting if needed
+	if *verbose {
+		logger.Init(*verbose)
+	}
+
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Error loading .env file: %v", err)
+		logger.Error.Printf("Warning: Error loading .env file: %v", err)
 	}
 
 	if os.Getenv("ANTHROPIC_API_KEY") == "" {
@@ -26,7 +43,7 @@ func main() {
 	// Get staged changes
 	changes, err := git.GetStagedChanges()
 	if err != nil {
-		log.Fatalf("Error getting staged changes: %v", err)
+		logger.Error.Fatalf("Failed to get staged changes: %v", err)
 	}
 
 	if len(changes) == 0 {
@@ -42,19 +59,19 @@ func main() {
 	// Get detailed content of changes
 	content, err := git.GetStagedContent()
 	if err != nil {
-		log.Fatalf("Error getting staged content: %v", err)
+		logger.Error.Fatalf("Failed to get staged content: %v", err)
 	}
 
 	// Initialize Anthropic client
 	client, err := llm.NewClient()
 	if err != nil {
-		log.Fatalf("Error initializing Anthropic client: %v", err)
+		logger.Error.Fatalf("Error initializing Anthropic client: %v", err)
 	}
 
 	fmt.Println("\n→ Generating commit message suggestions...")
 	suggestions, err := client.GenerateCommitSuggestions(content)
 	if err != nil {
-		log.Fatalf("Error generating commit messages: %v", err)
+		logger.Error.Fatalf("Error generating commit messages: %v", err)
 	}
 
 	// Display suggestions
@@ -100,7 +117,7 @@ func main() {
 
 	if confirm == "y" {
 		if err := git.CommitChanges(commitMessage); err != nil {
-			log.Fatalf("Error committing changes: %v", err)
+			logger.Error.Fatalf("Error committing changes: %v", err)
 		}
 		fmt.Println("Changes committed successfully!")
 	} else {

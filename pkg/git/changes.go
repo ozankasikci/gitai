@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/ozankasikci/commit-ai/pkg/logger"
 )
 
 type StagedChange struct {
@@ -28,18 +29,21 @@ func GetStagedChanges() ([]StagedChange, error) {
 	// Open repository in current directory
 	repo, err := git.PlainOpen(".")
 	if err != nil {
+		logger.Error.Printf("Failed to open git repository: %v", err)
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
 
 	// Get the working tree
 	worktree, err := repo.Worktree()
 	if err != nil {
+		logger.Error.Printf("Failed to get worktree: %v", err)
 		return nil, fmt.Errorf("failed to get worktree: %w", err)
 	}
 
 	// Get the status of the worktree
 	status, err := worktree.Status()
 	if err != nil {
+		logger.Error.Printf("Failed to get status: %v", err)
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
@@ -47,6 +51,7 @@ func GetStagedChanges() ([]StagedChange, error) {
 	for path, fileStatus := range status {
 		// Only include files that are actually staged
 		if fileStatus.Staging != git.Unmodified && fileStatus.Staging != git.Untracked {
+			logger.Debug.Printf("Processing staged file: %s (status: %s)", path, statusToString(fileStatus.Staging))
 			change := StagedChange{
 				Path:   path,
 				Status: statusToString(fileStatus.Staging),

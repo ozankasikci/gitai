@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/ozankasikci/commit-ai/pkg/logger"
 )
 
 type CommitSuggestion struct {
@@ -35,6 +36,9 @@ func NewClient() (*Client, error) {
 
 func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error) {
 	prompt := buildPrompt(changes)
+	
+	logger.Debug.Printf("Changes being sent to LLM:\n%s", changes)
+	logger.Debug.Printf("Full prompt being sent to LLM:\n%s", prompt)
 
 	msg, err := c.client.Messages.New(context.Background(), anthropic.MessageNewParams{
 		Model:     anthropic.F(anthropic.Model("claude-3-5-sonnet-20241022")),
@@ -45,14 +49,15 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 	})
 
 	if err != nil {
+		logger.Error.Printf("Error from LLM: %v", err)
 		return nil, fmt.Errorf("failed to generate commit message: %w", err)
 	}
 
-	// Get the text content from the response
 	var responseText string
 	for _, content := range msg.Content {
 		if content.Type == "text" {
 			responseText = content.Text
+			logger.Debug.Printf("Response from LLM:\n%s", responseText)
 			break
 		}
 	}
