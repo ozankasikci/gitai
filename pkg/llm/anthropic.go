@@ -71,9 +71,7 @@ func buildPrompt(changes string) string {
 6. Wrap subsequent lines at 72 characters
 7. Use the body to explain what and why vs. how
 
-Follow the Conventional Commits format: type(scope): description
-
-Types:
+Optionally use the Conventional Commits format (type(scope): description) if the change fits one of these types:
 - feat: new feature
 - fix: bug fix
 - docs: documentation only
@@ -81,6 +79,8 @@ Types:
 - refactor: code change that neither fixes a bug nor adds a feature
 - test: adding missing tests
 - chore: maintain
+
+If the change doesn't fit these types, write a direct descriptive message without a type prefix.
 
 Changes:
 %s
