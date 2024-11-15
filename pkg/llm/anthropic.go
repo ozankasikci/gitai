@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
-	"github.com/ozankasikci/commit-ai/pkg/logger"
+	"github.com/ozankasikci/gitai/pkg/logger"
 )
 
 type CommitSuggestion struct {
@@ -36,7 +36,7 @@ func NewClient() (*Client, error) {
 
 func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error) {
 	prompt := buildPrompt(changes)
-	
+
 	logger.Debugf("\n=== Changes being sent to LLM ===\n%s\n", changes)
 	logger.Debugf("\n=== Full prompt being sent to LLM ===\n%s\n", prompt)
 
@@ -65,7 +65,7 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 	suggestions := parseResponse(responseText)
 	logger.Debugf("\n=== Parsed Suggestions ===\n")
 	for i, suggestion := range suggestions {
-		logger.Debugf("Suggestion %d:\nMessage: %s\nExplanation: %s\n", 
+		logger.Debugf("Suggestion %d:\nMessage: %s\nExplanation: %s\n",
 			i+1, suggestion.Message, suggestion.Explanation)
 	}
 
@@ -105,7 +105,7 @@ Explanation: <why this message is appropriate, focusing on motivation and impact
 func parseResponse(response string) []CommitSuggestion {
 	var suggestions []CommitSuggestion
 	lines := strings.Split(response, "\n")
-	
+
 	var currentSuggestion *CommitSuggestion
 	for _, line := range lines {
 		line = strings.TrimSpace(line)

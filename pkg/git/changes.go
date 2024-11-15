@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/ozankasikci/commit-ai/pkg/logger"
+	"github.com/ozankasikci/gitai/pkg/logger"
 )
 
 type StagedChange struct {

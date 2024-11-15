@@ -1,7 +1,6 @@
-module github.com/ozankasikci/commit-ai
+module github.com/ozankasikci/gitai
 
 go 1.22.1
-
 require (
 	github.com/anthropics/anthropic-sdk-go v0.2.0-alpha.4
 	github.com/go-git/go-git/v5 v5.12.0
@@ -39,3 +38,4 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+

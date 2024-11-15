@@ -1,7 +1,7 @@
 .PHONY: build test cover lint clean
 
 build:
-	go build -o bin/commit-ai
+	go build -o bin/gitai
 
 test:
 	go test -v ./...

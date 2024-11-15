@@ -1,7 +1,6 @@
 .env
 .idea
 test-repo
-commit-ai
-!cmd/*
+gitai
 .DS_Store
 cmd/.DS_Store
