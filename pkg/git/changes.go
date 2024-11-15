@@ -93,6 +93,16 @@ func statusToString(status git.StatusCode) string {
 	}
 }
 
+// FormatChangesForPrompt converts the staged changes into a string format
+// that can be used in the LLM prompt
+func FormatChangesForPrompt(changes []StagedChange) string {
+	var builder strings.Builder
+	for _, change := range changes {
+		builder.WriteString(fmt.Sprintf("%s (%s)\n", change.Path, change.Status))
+	}
+	return builder.String()
+} 
+
 // GetStagedContent returns a summary of the staged changes
 func GetStagedContent() (string, error) {
 	repo, err := git.PlainOpen(".")

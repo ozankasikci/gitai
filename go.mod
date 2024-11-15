@@ -1,4 +1,4 @@
-module commit-ai
+module github.com/ozankasikci/commit-ai
 
 go 1.22.1
 
