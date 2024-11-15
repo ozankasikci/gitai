@@ -17,6 +17,10 @@ type StagedChange struct {
 	Path     string
 	Status   string
 	FileType string
+	Content  string
+	Summary  string
+	IsTestFile bool
+	Package  string
 }
 
 // GetStagedChanges returns a list of files that are staged for commit
@@ -46,10 +50,22 @@ func GetStagedChanges() ([]StagedChange, error) {
 			change := StagedChange{
 				Path:   path,
 				Status: statusToString(fileStatus.Staging),
+				FileType: filepath.Ext(path),
 			}
 			
-			// Get file type based on extension
-			change.FileType = filepath.Ext(path)
+			// Get content based on file status
+			content, err := getFileContent(worktree, path)
+			if err == nil {
+				change.Content = content
+				change.Summary = generateChangeSummary(content)
+			}
+			
+			// Basic file analysis
+			change.IsTestFile = strings.Contains(path, "_test.")
+			if strings.HasSuffix(path, ".go") {
+				change.Package = detectGoPackage(change.Content)
+			}
+			
 			changes = append(changes, change)
 		}
 	}
@@ -275,4 +291,39 @@ func parseGitConfig(content string) (name, email string) {
 	}
 
 	return name, email
+}
+
+// Helper functions for content analysis
+func getFileContent(w *git.Worktree, path string) (string, error) {
+	file, err := w.Filesystem.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	// Read first 1000 bytes as preview
+	preview := make([]byte, 1000)
+	n, _ := file.Read(preview)
+	return string(preview[:n]), nil
+}
+
+func generateChangeSummary(content string) string {
+	// For now, just return first 100 chars if content is longer
+	if len(content) > 100 {
+		return content[:100] + "..."
+	}
+	return content
+}
+
+func detectGoPackage(content string) string {
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "package ") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				return parts[1]
+			}
+		}
+	}
+	return ""
 } 

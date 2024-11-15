@@ -1,24 +1,25 @@
 package git
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 )
 
+// Helper function to set up a test repository
 func setupTestRepo(t *testing.T) (string, func()) {
-	// Create a temporary directory for the test repo
-	dir, err := os.MkdirTemp("", "git-test-*")
+	dir, err := ioutil.TempDir("", "git-test")
 	assert.NoError(t, err)
 
-	// Initialize a new repo
 	_, err = git.PlainInit(dir, false)
 	assert.NoError(t, err)
 
-	// Create a cleanup function
 	cleanup := func() {
 		os.RemoveAll(dir)
 	}
@@ -30,34 +31,177 @@ func TestGetStagedChanges(t *testing.T) {
 	dir, cleanup := setupTestRepo(t)
 	defer cleanup()
 
-	// Change to test directory
-	originalDir, _ := os.Getwd()
 	err := os.Chdir(dir)
 	assert.NoError(t, err)
-	defer os.Chdir(originalDir)
 
-	// Create and stage a test file
-	testFile := filepath.Join(dir, "test.txt")
-	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	// Create and stage a Go file
+	goContent := `package main
+
+func main() {
+	println("Hello, World!")
+}
+`
+	err = os.WriteFile("main.go", []byte(goContent), 0644)
 	assert.NoError(t, err)
 
-	// Get the repo and stage the file
+	// Create and stage a test file
+	testContent := `package main
+
+import "testing"
+
+func TestHello(t *testing.T) {
+	// Test implementation
+}
+`
+	err = os.WriteFile("main_test.go", []byte(testContent), 0644)
+	assert.NoError(t, err)
+
+	// Stage the files
 	repo, err := git.PlainOpen(".")
 	assert.NoError(t, err)
 	w, err := repo.Worktree()
 	assert.NoError(t, err)
-	_, err = w.Add("test.txt")
+	_, err = w.Add("main.go")
+	assert.NoError(t, err)
+	_, err = w.Add("main_test.go")
 	assert.NoError(t, err)
 
 	// Test GetStagedChanges
 	changes, err := GetStagedChanges()
 	assert.NoError(t, err)
-	assert.Len(t, changes, 1, "Should only detect one staged file")
-	
-	// Verify only staged files are included
+	assert.Len(t, changes, 2)
+
+	// Create a map for easier testing
+	changeMap := make(map[string]StagedChange)
 	for _, change := range changes {
-		assert.Equal(t, "test.txt", change.Path)
-		assert.Equal(t, "added", change.Status)
+		changeMap[change.Path] = change
+	}
+
+	// Test main.go properties
+	mainFile := changeMap["main.go"]
+	assert.Equal(t, "main.go", mainFile.Path)
+	assert.Equal(t, "added", mainFile.Status)
+	assert.Equal(t, ".go", mainFile.FileType)
+	assert.Equal(t, "main", mainFile.Package)
+	assert.False(t, mainFile.IsTestFile)
+	assert.Contains(t, mainFile.Content, "package main")
+	assert.Contains(t, mainFile.Summary, "package main")
+
+	// Test main_test.go properties
+	testFile := changeMap["main_test.go"]
+	assert.Equal(t, "main_test.go", testFile.Path)
+	assert.Equal(t, "added", testFile.Status)
+	assert.Equal(t, ".go", testFile.FileType)
+	assert.Equal(t, "main", testFile.Package)
+	assert.True(t, testFile.IsTestFile)
+	assert.Contains(t, testFile.Content, "func TestHello")
+}
+
+func TestGetStagedChangesWithLargeContent(t *testing.T) {
+	dir, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	err := os.Chdir(dir)
+	assert.NoError(t, err)
+
+	// Create a large file
+	var largeContent strings.Builder
+	for i := 0; i < 2000; i++ {
+		largeContent.WriteString(fmt.Sprintf("Line %d\n", i))
+	}
+
+	err = os.WriteFile("large.txt", []byte(largeContent.String()), 0644)
+	assert.NoError(t, err)
+
+	// Stage the file
+	repo, err := git.PlainOpen(".")
+	assert.NoError(t, err)
+	w, err := repo.Worktree()
+	assert.NoError(t, err)
+	_, err = w.Add("large.txt")
+	assert.NoError(t, err)
+
+	// Test GetStagedChanges
+	changes, err := GetStagedChanges()
+	assert.NoError(t, err)
+	assert.Len(t, changes, 1)
+
+	change := changes[0]
+	assert.Equal(t, "large.txt", change.Path)
+	assert.Equal(t, ".txt", change.FileType)
+	assert.True(t, len(change.Content) <= 1000, "Content should be truncated")
+	assert.True(t, len(change.Summary) <= 103, "Summary should be <= 100 chars + '...'")
+}
+
+func TestDetectGoPackage(t *testing.T) {
+	testCases := []struct {
+		name     string
+		content  string
+		expected string
+	}{
+		{
+			name: "simple package",
+			content: `package main
+
+func main() {}`,
+			expected: "main",
+		},
+		{
+			name: "package with comments",
+			content: `// Some comment
+package utils
+
+func Helper() {}`,
+			expected: "utils",
+		},
+		{
+			name: "no package",
+			content: `func main() {}`,
+			expected: "",
+		},
+		{
+			name: "empty content",
+			content: "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := detectGoPackage(tc.content)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestGenerateChangeSummary(t *testing.T) {
+	testCases := []struct {
+		name     string
+		content  string
+		expected string
+	}{
+		{
+			name:     "short content",
+			content:  "Short summary",
+			expected: "Short summary",
+		},
+		{
+			name:     "long content",
+			content:  strings.Repeat("a", 150),
+			expected: strings.Repeat("a", 100) + "...",
+		},
+		{
+			name:     "empty content",
+			content:  "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := generateChangeSummary(tc.content)
+			assert.Equal(t, tc.expected, result)
+		})
 	}
 }
 
