@@ -37,8 +37,8 @@ func NewClient() (*Client, error) {
 func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error) {
 	prompt := buildPrompt(changes)
 	
-	logger.Debug.Printf("Changes being sent to LLM:\n%s", changes)
-	logger.Debug.Printf("Full prompt being sent to LLM:\n%s", prompt)
+	logger.Debugf("\n=== Changes being sent to LLM ===\n%s\n", changes)
+	logger.Debugf("\n=== Full prompt being sent to LLM ===\n%s\n", prompt)
 
 	msg, err := c.client.Messages.New(context.Background(), anthropic.MessageNewParams{
 		Model:     anthropic.F(anthropic.Model("claude-3-5-sonnet-20241022")),
@@ -49,7 +49,7 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 	})
 
 	if err != nil {
-		logger.Error.Printf("Error from LLM: %v", err)
+		logger.Errorf("Error from LLM: %v", err)
 		return nil, fmt.Errorf("failed to generate commit message: %w", err)
 	}
 
@@ -57,12 +57,19 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 	for _, content := range msg.Content {
 		if content.Type == "text" {
 			responseText = content.Text
-			logger.Debug.Printf("Response from LLM:\n%s", responseText)
+			logger.Debugf("\n=== Response from LLM ===\n%s\n", responseText)
 			break
 		}
 	}
 
-	return parseResponse(responseText), nil
+	suggestions := parseResponse(responseText)
+	logger.Debugf("\n=== Parsed Suggestions ===\n")
+	for i, suggestion := range suggestions {
+		logger.Debugf("Suggestion %d:\nMessage: %s\nExplanation: %s\n", 
+			i+1, suggestion.Message, suggestion.Explanation)
+	}
+
+	return suggestions, nil
 }
 
 func buildPrompt(changes string) string {

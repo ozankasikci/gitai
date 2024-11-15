@@ -26,55 +26,41 @@ type StagedChange struct {
 
 // GetStagedChanges returns a list of files that are staged for commit
 func GetStagedChanges() ([]StagedChange, error) {
-	// Open repository in current directory
+	logger.Infof("Getting staged changes...")
+	
 	repo, err := git.PlainOpen(".")
 	if err != nil {
-		logger.Error.Printf("Failed to open git repository: %v", err)
+		logger.Errorf("Failed to open git repository: %v", err)
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
+	logger.Debugf("Successfully opened git repository")
 
-	// Get the working tree
 	worktree, err := repo.Worktree()
 	if err != nil {
-		logger.Error.Printf("Failed to get worktree: %v", err)
+		logger.Errorf("Failed to get worktree: %v", err)
 		return nil, fmt.Errorf("failed to get worktree: %w", err)
 	}
+	logger.Debugf("Successfully got worktree")
 
-	// Get the status of the worktree
 	status, err := worktree.Status()
 	if err != nil {
-		logger.Error.Printf("Failed to get status: %v", err)
+		logger.Errorf("Failed to get status: %v", err)
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
 	var changes []StagedChange
 	for path, fileStatus := range status {
-		// Only include files that are actually staged
 		if fileStatus.Staging != git.Unmodified && fileStatus.Staging != git.Untracked {
-			logger.Debug.Printf("Processing staged file: %s (status: %s)", path, statusToString(fileStatus.Staging))
+			logger.Debugf("Found staged file: %s (status: %s)", path, statusToString(fileStatus.Staging))
 			change := StagedChange{
 				Path:   path,
 				Status: statusToString(fileStatus.Staging),
-				FileType: filepath.Ext(path),
 			}
-			
-			// Get content based on file status
-			content, err := getFileContent(worktree, path)
-			if err == nil {
-				change.Content = content
-				change.Summary = generateChangeSummary(content)
-			}
-			
-			// Basic file analysis
-			change.IsTestFile = strings.Contains(path, "_test.")
-			if strings.HasSuffix(path, ".go") {
-				change.Package = detectGoPackage(change.Content)
-			}
-			
 			changes = append(changes, change)
 		}
 	}
 
+	logger.Infof("Found %d staged changes", len(changes))
 	return changes, nil
 }
 

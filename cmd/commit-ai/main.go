@@ -4,7 +4,6 @@ import (
 	"flag"
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -32,23 +31,24 @@ func main() {
 		logger.Init(*verbose)
 	}
 
+	logger.Infof("Starting commit-ai...")
+	logger.Debugf("Verbose mode: %v", *verbose)
+
 	if err := godotenv.Load(); err != nil {
-		logger.Error.Printf("Warning: Error loading .env file: %v", err)
+		logger.Errorf("Warning: Error loading .env file: %v", err)
+	} else {
+		logger.Debugf("Successfully loaded .env file")
 	}
 
-	if os.Getenv("ANTHROPIC_API_KEY") == "" {
-		log.Fatal("ANTHROPIC_API_KEY is required in .env file")
-	}
-
-	// Get staged changes
 	changes, err := git.GetStagedChanges()
 	if err != nil {
-		logger.Error.Fatalf("Failed to get staged changes: %v", err)
+		logger.Errorf("Failed to get staged changes: %v", err)
+		os.Exit(1)
 	}
 
 	if len(changes) == 0 {
-		fmt.Println("No staged changes found")
-		return
+		logger.Infoln("No staged changes found")
+		os.Exit(0)
 	}
 
 	fmt.Printf("→ Found %d staged files:\n", len(changes))
