@@ -12,12 +12,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var commitCmd = &cobra.Command{
-	Use:   "commit",
-	Short: "Generate and apply commit messages",
-	Long: `Generate commit messages using AI based on your staged changes.
+func NewCommitCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "commit",
+		Short: "Generate and apply commit messages",
+		Long: `Generate commit messages using AI based on your staged changes.
 The messages will follow conventional commits format and best practices.`,
-	RunE: runCommit,
+		RunE: runCommit,
+	}
 }
 
 func runCommit(cmd *cobra.Command, args []string) error {
@@ -95,8 +97,4 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func init() {
-	RootCmd.AddCommand(commitCmd)
-}
-
-var CommitCmd = commitCmd 
+var CommitCmd = NewCommitCommand() 

@@ -6,18 +6,23 @@ import (
 	"github.com/ozankasikci/gitai/internal/git"
 )
 
-var gitignoreCmd = &cobra.Command{
-	Use:   "gitignore",
-	Short: "Gitignore file operations",
-	Long:  `Commands for working with .gitignore files`,
-}
+func NewGitignoreCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "gitignore",
+		Short: "Gitignore file operations",
+		Long:  `Commands for working with .gitignore files`,
+	}
 
-var generateCmd = &cobra.Command{
-	Use:   "generate [templates...]",
-	Short: "Generate .gitignore file",
-	Long: `Generate a .gitignore file based on specified templates.
+	generateCmd := &cobra.Command{
+		Use:   "generate [templates...]",
+		Short: "Generate .gitignore file",
+		Long: `Generate a .gitignore file based on specified templates.
 Example: gitai gitignore generate go node python`,
-	RunE: runGenerate,
+		RunE: runGenerate,
+	}
+
+	cmd.AddCommand(generateCmd)
+	return cmd
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
@@ -31,9 +36,4 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Successfully generated .gitignore with templates: %v\n", args)
 	return nil
-}
-
-func init() {
-	gitignoreCmd.AddCommand(generateCmd)
-	RootCmd.AddCommand(gitignoreCmd)
 } 

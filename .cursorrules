@@ -1,0 +1,1 @@
+the entrypoint is cmd/gitai/gitai.go, don't try to use another entrypoint

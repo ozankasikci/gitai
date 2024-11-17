@@ -23,6 +23,12 @@ type StagedChange struct {
 	Package    string
 }
 
+type FileChange struct {
+	Path   string
+	Status string
+	Staged bool
+}
+
 // GetStagedChanges returns a list of files that are staged for commit
 func GetStagedChanges() ([]StagedChange, error) {
 	logger.Infof("Getting staged changes...")
@@ -280,4 +286,50 @@ func detectGoPackage(content string) string {
 		}
 	}
 	return ""
+}
+
+// GetAllChanges returns both staged and unstaged changes
+func GetAllChanges() ([]FileChange, error) {
+	repo, err := git.PlainOpen(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open git repository: %w", err)
+	}
+
+	w, err := repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	status, err := w.Status()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status: %w", err)
+	}
+
+	var changes []FileChange
+	for path, fileStatus := range status {
+		change := FileChange{
+			Path:   path,
+			Status: statusToString(fileStatus.Worktree),
+			Staged: fileStatus.Staging != git.Unmodified,
+		}
+		changes = append(changes, change)
+	}
+
+	return changes, nil
+}
+
+// StageFile stages a single file
+func StageFile(path string) error {
+	repo, err := git.PlainOpen(".")
+	if err != nil {
+		return fmt.Errorf("failed to open git repository: %w", err)
+	}
+
+	w, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	_, err = w.Add(path)
+	return err
 }

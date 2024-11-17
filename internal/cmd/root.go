@@ -15,6 +15,15 @@ var RootCmd = &cobra.Command{
 Currently supports generating commit messages based on staged changes.`,
 }
 
+func init() {
+	// Add all subcommands here
+	RootCmd.AddCommand(
+		NewAddCommand(),
+		NewCommitCommand(),
+		NewGitignoreCommand(),
+	)
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
