@@ -5,20 +5,24 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"github.com/ozankasikci/gitai/internal/git"
-	"strings"
 )
+
+type fileSelection struct {
+	Path     string
+	Status   string
+	IsStaged bool
+}
 
 func NewAddCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Interactively stage files for commit",
-			RunE:  runAdd,
+		RunE:  runAdd,
 	}
 	return cmd
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	// Get all changed files (both staged and unstaged)
 	changes, err := git.GetAllChanges()
 	if err != nil {
 		return fmt.Errorf("failed to get changes: %w", err)
@@ -29,49 +33,50 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}",
-		Active:   "\U0001F449 {{ .Path | cyan }} ({{ .Status | red }})",
-		Inactive: "  {{ .Path | faint }} ({{ .Status | faint }})",
-		Selected: "\U00002705 {{ .Path | green }} ({{ .Status }})",
+	selections := make([]fileSelection, len(changes))
+	for i, change := range changes {
+		selections[i] = fileSelection{
+			Path:     change.Path,
+			Status:   change.Status,
+			IsStaged: change.Staged,
+		}
 	}
 
-	searcher := func(input string, index int) bool {
-		change := changes[index]
-		name := change.Path
-		input = input
-
-		return strings.Contains(strings.ToLower(name), strings.ToLower(input))
+	templates := &promptui.SelectTemplates{
+		Active:   "[{{ if .IsStaged }}✓{{ else }} {{ end }}] {{ .Path | cyan }} ({{ .Status | red }})",
+		Inactive: "[{{ if .IsStaged }}✓{{ else }} {{ end }}] {{ .Path }} ({{ .Status }})",
+		Selected: "[{{ if .IsStaged }}✓{{ else }} {{ end }}] {{ .Path }} ({{ .Status }})",
 	}
 
 	prompt := promptui.Select{
-		Label:     "Select a file to stage (↑/↓ to navigate, enter to select, ctrl+c to finish)",
-		Items:     changes,
+		Label:     "Space to stage/unstage, Enter to exit",
+		Items:     selections,
 		Templates: templates,
 		Size:      10,
-		Searcher:  searcher,
 	}
 
-	stagedFiles := make(map[string]bool)
 	for {
 		i, _, err := prompt.Run()
+		if err == promptui.ErrInterrupt || err == promptui.ErrEOF {
+			return nil // Exit on Ctrl+C or Enter
+		}
 		if err != nil {
-			if err == promptui.ErrInterrupt {
-				break // User pressed Ctrl+C to finish
-			}
 			return fmt.Errorf("prompt failed: %w", err)
 		}
 
-		file := changes[i].Path
-		if !stagedFiles[file] {
-			if err := git.StageFile(file); err != nil {
-				return fmt.Errorf("failed to stage %s: %w", file, err)
-			}
-			stagedFiles[file] = true
-			fmt.Printf("Staged: %s\n", file)
+		// Toggle staging
+		file := selections[i].Path
+		if err := git.StageFile(file); err != nil {
+			return fmt.Errorf("failed to stage %s: %w", file, err)
 		}
+		
+		// Update the staged status
+		changes, _ = git.GetAllChanges()
+		for j, change := range changes {
+			if j < len(selections) {
+				selections[j].IsStaged = change.Staged
+			}
+		}
+		prompt.Items = selections
 	}
-
-	fmt.Printf("Successfully staged %d files\n", len(stagedFiles))
-	return nil
 } 
