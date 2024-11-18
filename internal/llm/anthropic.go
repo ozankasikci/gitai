@@ -24,6 +24,10 @@ type Client struct {
 	client *anthropic.Client
 }
 
+type SuggestionsMsg struct {
+	Suggestions []CommitSuggestion
+}
+
 func NewClient() (*Client, error) {
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if apiKey == "" {

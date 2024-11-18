@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/spf13/cobra"
 	"github.com/ozankasikci/gitai/internal/git"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type fileSelection struct {
@@ -17,9 +19,15 @@ type model struct {
 	choices  []fileSelection
 	cursor   int
 	selected map[int]bool
+	spinner  spinner.Model
+	loading  bool
 }
 
 func initialModel(changes []git.FileChange) model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
 	selections := make([]fileSelection, len(changes))
 	for i, change := range changes {
 		selections[i] = fileSelection{
@@ -32,16 +40,27 @@ func initialModel(changes []git.FileChange) model {
 	return model{
 		choices:  selections,
 		selected: make(map[int]bool),
+		spinner:  s,
+		loading:  false,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return m.spinner.Tick
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+
 	case tea.KeyMsg:
+		if m.loading {
+			return m, nil // Ignore key presses while loading
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -73,17 +92,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case " ":
-			// Toggle staging for the current cursor position
+			m.loading = true
 			currentFile := m.choices[m.cursor].Path
-			if m.choices[m.cursor].IsStaged {
-				if err := git.RestoreStaged(currentFile); err == nil {
-					m.choices[m.cursor].IsStaged = false
+			go func() {
+				if m.choices[m.cursor].IsStaged {
+					git.RestoreStaged(currentFile)
+				} else {
+					git.StageFile(currentFile)
 				}
-			} else {
-				if err := git.StageFile(currentFile); err == nil {
-					m.choices[m.cursor].IsStaged = true
-				}
-			}
+				m.choices[m.cursor].IsStaged = !m.choices[m.cursor].IsStaged
+				m.loading = false
+			}()
+			return m, m.spinner.Tick
 		case "enter":
 			return m, tea.Quit
 		}
@@ -92,6 +112,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	if m.loading {
+		return fmt.Sprintf("%s Processing...\n", m.spinner.View())
+	}
+
 	s := "Use space to stage/unstage, 'a' to toggle all, enter to finish\n\n"
 
 	for i, choice := range m.choices {

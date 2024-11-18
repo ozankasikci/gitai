@@ -5,12 +5,61 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/ozankasikci/gitai/internal/git"
 	"github.com/ozankasikci/gitai/internal/llm"
 	"github.com/ozankasikci/gitai/internal/logger"
 	"github.com/spf13/cobra"
 )
+
+type commitModel struct {
+	spinner    spinner.Model
+	loading    bool
+	err        error
+	suggestions []llm.CommitSuggestion
+}
+
+func initialCommitModel() commitModel {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	return commitModel{
+		spinner: s,
+		loading: true,
+	}
+}
+
+func (m commitModel) Init() tea.Cmd {
+	return m.spinner.Tick
+}
+
+func (m commitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	case llm.SuggestionsMsg:
+		m.loading = false
+		m.suggestions = msg.Suggestions
+		return m, tea.Quit
+	case error:
+		m.err = msg
+		m.loading = false
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m commitModel) View() string {
+	if m.loading {
+		return fmt.Sprintf("%s Generating commit suggestions...\n", m.spinner.View())
+	}
+	return ""
+}
 
 func NewCommitCommand() *cobra.Command {
 	return &cobra.Command{
@@ -23,7 +72,6 @@ The messages will follow conventional commits format and best practices.`,
 }
 
 func runCommit(cmd *cobra.Command, args []string) error {
-	// Get staged changes
 	changes, err := git.GetStagedChanges()
 	if err != nil {
 		return fmt.Errorf("failed to get staged changes: %w", err)
@@ -33,23 +81,39 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no staged changes found. Use 'git add' to stage changes")
 	}
 
-	// Get the content of staged changes
 	content, err := git.GetStagedContent()
 	if err != nil {
 		return fmt.Errorf("failed to get staged content: %w", err)
 	}
 
-	// Initialize LLM client
 	client, err := llm.NewClient()
 	if err != nil {
 		return fmt.Errorf("failed to initialize LLM client: %w", err)
 	}
 
-	// Generate commit suggestions
-	suggestions, err := client.GenerateCommitSuggestions(content)
+	p := tea.NewProgram(initialCommitModel())
+	
+	// Run LLM in goroutine
+	go func() {
+		suggestions, err := client.GenerateCommitSuggestions(content)
+		if err != nil {
+			p.Send(err)
+			return
+		}
+		p.Send(llm.SuggestionsMsg{Suggestions: suggestions})
+	}()
+
+	model, err := p.Run()
 	if err != nil {
-		return fmt.Errorf("failed to generate commit suggestions: %w", err)
+		return fmt.Errorf("error running program: %w", err)
 	}
+
+	m := model.(commitModel)
+	if m.err != nil {
+		return m.err
+	}
+
+	suggestions := m.suggestions
 
 	// Display suggestions
 	fmt.Println("\nGenerated commit message suggestions:")
@@ -60,7 +124,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Prompt user to select a message
+	// Rest of the commit logic remains the same
 	fmt.Printf("\nSelect a commit message (1-%d), 0 to cancel, or type your own message: ", len(suggestions))
 	
 	scanner := bufio.NewScanner(os.Stdin)
@@ -72,7 +136,6 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	var selectedMessage string
 	selection, err := strconv.Atoi(input)
 	if err != nil {
-		// If input isn't a number, use it as the commit message
 		selectedMessage = input
 	} else {
 		if selection == 0 {
@@ -87,9 +150,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		selectedMessage = suggestions[selection-1].Message
 	}
 
-	// Apply the commit message
-	err = git.CommitChanges(selectedMessage)
-	if err != nil {
+	if err := git.CommitChanges(selectedMessage); err != nil {
 		return fmt.Errorf("failed to commit changes: %w", err)
 	}
 
