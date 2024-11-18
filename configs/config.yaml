@@ -3,5 +3,5 @@ llm:
   maxTokens: 1024
 
 logger:
-  level: "info"
+  level: "debug"
   verbose: false 
