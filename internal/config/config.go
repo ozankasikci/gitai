@@ -52,9 +52,9 @@ func Init() error {
 	// Environment variables
 	viper.SetEnvPrefix("GITAI")
 	viper.AutomaticEnv()
-	
-	// Remove or comment out the Anthropic-specific binding since Ollama is now default
-	// viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
+
+	// Bind specific environment variables
+	viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
