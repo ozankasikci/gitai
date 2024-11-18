@@ -333,3 +333,24 @@ func StageFile(path string) error {
 	_, err = w.Add(path)
 	return err
 }
+
+// RestoreStaged unstages a single file
+func RestoreStaged(path string) error {
+	repo, err := git.PlainOpen(".")
+	if err != nil {
+		return fmt.Errorf("failed to open git repository: %w", err)
+	}
+
+	_, err = repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Use git command directly for single file unstaging
+	cmd := exec.Command("git", "restore", "--staged", path)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to unstage file: %w", err)
+	}
+
+	return nil
+}
