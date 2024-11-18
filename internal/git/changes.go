@@ -55,11 +55,15 @@ func GetStagedChanges() ([]StagedChange, error) {
 
 	var changes []StagedChange
 	for path, fileStatus := range status {
-		if fileStatus.Staging != git.Unmodified && fileStatus.Staging != git.Untracked {
+		if fileStatus.Staging != git.Unmodified && fileStatus.Staging != git.Untracked ||
+		   fileStatus.Worktree == git.Deleted {
 			logger.Debugf("Found staged file: %s (status: %s)", path, statusToString(fileStatus.Staging))
 			change := StagedChange{
 				Path:   path,
 				Status: statusToString(fileStatus.Staging),
+			}
+			if fileStatus.Worktree == git.Deleted {
+				change.Status = "deleted"
 			}
 			changes = append(changes, change)
 		}
