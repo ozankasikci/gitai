@@ -52,6 +52,10 @@ func Init() error {
 		viper.AddConfigPath("configs")
 	}
 
+	// Set default values
+	viper.SetDefault("llm.anthropic.max_tokens", 1000)
+	viper.SetDefault("llm.ollama.max_tokens", 1000)
+
 	// Initialize empty config
 	cfg = &Config{}
 

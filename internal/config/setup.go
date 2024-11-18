@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"github.com/pterm/pterm"
+
 	"github.com/joho/godotenv"
+	"github.com/ozankasikci/gitai/internal/logger"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/ozankasikci/gitai/internal/logger"
 )
 
 // Setup initializes the application configuration and environment
@@ -83,7 +84,7 @@ func selectProvider() (string, error) {
 		WithOptions([]string{"Anthropic", "Ollama"}).
 		WithDefaultText("Select AI provider:").
 		Show()
-	
+
 	if err != nil {
 		return "", fmt.Errorf("failed to get provider selection: %v", err)
 	}
@@ -111,7 +112,7 @@ func setupAnthropic() error {
 		WithMask("*").
 		WithDefaultText("Enter Anthropic API key:").
 		Show()
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to get API key: %v", err)
 	}
@@ -119,9 +120,8 @@ func setupAnthropic() error {
 	// Select model
 	model, err := pterm.DefaultInteractiveSelect.
 		WithOptions([]string{
-			"claude-3-opus-20240229",
-			"claude-3-sonnet-20240229",
-			"claude-3-haiku-20240307",
+			"claude-3-5-haiku-latest",
+			"claude-3-5-sonnet-latest",
 		}).
 		WithDefaultText("Select Claude model:").
 		Show()
@@ -134,6 +134,13 @@ func setupAnthropic() error {
 	cfg := Get()
 	cfg.LLM.Anthropic.APIKey = apiKey
 	cfg.LLM.Anthropic.Model = model
+	cfg.LLM.Anthropic.MaxTokens = 1000 // Set default max tokens
+
+	// Save config to file
+	if err := SaveConfig(); err != nil {
+		return fmt.Errorf("failed to save config: %v", err)
+	}
+
 	return nil
 }
 
@@ -143,7 +150,7 @@ func setupOllama() error {
 		WithDefaultValue("http://localhost:11434").
 		WithDefaultText("Enter Ollama URL:").
 		Show()
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to get URL: %v", err)
 	}
@@ -174,11 +181,11 @@ func setupOllama() error {
 // Add this new function to save the config
 func SaveConfig() error {
 	for key, value := range map[string]interface{}{
-		"llm.provider":       cfg.LLM.Provider,
+		"llm.provider":         cfg.LLM.Provider,
 		"llm.anthropic.apikey": cfg.LLM.Anthropic.APIKey,
 		"llm.anthropic.model":  cfg.LLM.Anthropic.Model,
-		"llm.ollama.url":     cfg.LLM.Ollama.URL,
-		"llm.ollama.model":   cfg.LLM.Ollama.Model,
+		"llm.ollama.url":       cfg.LLM.Ollama.URL,
+		"llm.ollama.model":     cfg.LLM.Ollama.Model,
 	} {
 		viper.Set(key, value)
 	}
