@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/ozankasikci/gitai/internal/git"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ozankasikci/gitai/internal/logger"
 )
 
 type fileSelection struct {
@@ -21,7 +22,10 @@ type model struct {
 	selected map[int]bool
 	spinner  spinner.Model
 	loading  bool
+	quitting bool
 }
+
+type toggleCompleteMsg struct{}
 
 func initialModel(changes []git.FileChange) model {
 	s := spinner.New()
@@ -56,13 +60,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
 
+	case toggleCompleteMsg:
+		m.loading = false
+		return m, nil
+
 	case tea.KeyMsg:
 		if m.loading {
-			return m, nil // Ignore key presses while loading
+			if msg.String() == "q" || msg.String() == "ctrl+c" {
+				m.quitting = true
+				return m, tea.Quit
+			}
+			return m, nil
 		}
 
 		switch msg.String() {
 		case "ctrl+c", "q":
+			m.quitting = true
 			return m, tea.Quit
 		case "up", "k":
 			if m.cursor > 0 {
@@ -92,19 +105,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case " ":
-			m.loading = true
 			currentFile := m.choices[m.cursor].Path
-			go func() {
-				if m.choices[m.cursor].IsStaged {
-					git.RestoreStaged(currentFile)
-				} else {
-					git.StageFile(currentFile)
-				}
-				m.choices[m.cursor].IsStaged = !m.choices[m.cursor].IsStaged
-				m.loading = false
-			}()
-			return m, m.spinner.Tick
+			if m.choices[m.cursor].IsStaged {
+				git.RestoreStaged(currentFile)
+			} else {
+				git.StageFile(currentFile)
+			}
+			m.choices[m.cursor].IsStaged = !m.choices[m.cursor].IsStaged
+			return m, nil
 		case "enter":
+			logger.Infof("Enter key pressed, completing add operation")
+			m.quitting = false
 			return m, tea.Quit
 		}
 	}
@@ -146,6 +157,7 @@ func NewAddCommand() *cobra.Command {
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
+	logger.Infof("Starting runAdd...")
 	changes, err := git.GetAllChanges()
 	if err != nil {
 		return fmt.Errorf("failed to get changes: %w", err)
@@ -157,9 +169,20 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	p := tea.NewProgram(initialModel(changes))
-	if _, err := p.Run(); err != nil {
+	m, err := p.Run()
+	if err != nil {
 		return fmt.Errorf("error running program: %w", err)
 	}
 
+	// Check if the user quit
+	if m != nil {
+		finalModel := m.(model)
+		logger.Infof("Add UI finished. Quitting: %v", finalModel.quitting)
+		if finalModel.quitting {
+			return fmt.Errorf("user cancelled")
+		}
+	}
+
+	logger.Infof("runAdd completed successfully")
 	return nil
 } 

@@ -136,6 +136,12 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	}
 	input := scanner.Text()
 
+	// Handle empty input (just pressing enter)
+	if input == "" {
+		fmt.Println("Empty input - commit cancelled")
+		return nil
+	}
+
 	var selectedMessage string
 	selection, err := strconv.Atoi(input)
 	if err != nil {

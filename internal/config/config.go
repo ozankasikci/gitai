@@ -45,8 +45,8 @@ func Init() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("$HOME/.gitai")
 	viper.AddConfigPath("/etc/gitai")
+	viper.AddConfigPath("$HOME/.config/gitai")
 	viper.AddConfigPath("configs")
 
 	// Set defaults for Anthropic
@@ -55,7 +55,7 @@ func Init() error {
 
 	// Set defaults for Ollama
 	viper.SetDefault("llm.ollama.url", "http://localhost:11434")
-	viper.SetDefault("llm.ollama.model", "llama2:3.2")
+	viper.SetDefault("llm.ollama.model", "llama3.2")
 	viper.SetDefault("llm.ollama.maxTokens", int64(1024))
 
 	// Set default provider
@@ -108,4 +108,20 @@ func validateConfig(cfg *Config) error {
 
 func Get() *Config {
 	return cfg
+}
+
+// GetProviderAndModel returns the current provider and model as strings
+func (c *Config) GetProviderAndModel() (provider, model string) {
+	provider = c.LLM.Provider
+	
+	switch provider {
+	case "anthropic":
+		model = c.LLM.Anthropic.Model
+	case "ollama":
+		model = c.LLM.Ollama.Model
+	default:
+		model = "unknown"
+	}
+	
+	return provider, model
 }

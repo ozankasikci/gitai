@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"fmt"
+	"github.com/pterm/pterm"
 )
 
 var osExit = os.Exit
@@ -56,6 +57,22 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		logger.Debugf("No .env file found: %v", err)
 	}
+
+	// Get config and provider/model info
+	cfg := config.Get()
+	provider, model := cfg.GetProviderAndModel()
+
+	// Create table data
+	tableData := pterm.TableData{
+		{"Provider", provider},
+		{"Model", model},
+	}
+
+	// Render table
+	_ = pterm.DefaultTable.
+		WithData(tableData).
+		WithBoxed(true).
+		Render()
 
 	// Execute root command
 	cmd.Execute()
