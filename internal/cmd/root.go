@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-
 	"github.com/spf13/cobra"
+	"github.com/ozankasikci/gitai/internal/logger"
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -13,6 +13,11 @@ var RootCmd = &cobra.Command{
 	Short: "GitAI - AI-powered Git assistant",
 	Long: `GitAI is a command-line tool that uses AI to help with Git operations.
 Currently supports generating commit messages based on staged changes.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Initialize logger before any command runs
+		logger.InitDefault()
+		return nil
+	},
 }
 
 func init() {

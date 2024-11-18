@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -47,44 +48,22 @@ func Init() error {
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("/etc/gitai")
 	viper.AddConfigPath("$HOME/.config/gitai")
-	viper.AddConfigPath("configs")
+	if os.Getenv("GITAI_ENV") == "dev" {
+		viper.AddConfigPath("configs")
+	}
 
-	// Set defaults for Anthropic
-	viper.SetDefault("llm.anthropic.model", "claude-3-5-haiku-latest")
-	viper.SetDefault("llm.anthropic.maxTokens", int64(1024))
+	// Initialize empty config
+	cfg = &Config{}
 
-	// Set defaults for Ollama
-	viper.SetDefault("llm.ollama.url", "http://localhost:11434")
-	viper.SetDefault("llm.ollama.model", "llama3.2")
-	viper.SetDefault("llm.ollama.maxTokens", int64(1024))
-
-	// Set default provider
-	viper.SetDefault("llm.provider", "ollama")
-
-	// Logger defaults
-	viper.SetDefault("logger.verbose", false)
-
-	// Environment variables
-	viper.SetEnvPrefix("GITAI")
-	viper.AutomaticEnv()
-
-	// Bind specific environment variables
-	viper.BindEnv("llm.anthropic.apiKey", "ANTHROPIC_API_KEY")
-
+	// Try to read existing config
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
 	}
 
-	cfg = &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
-	}
-
-	// Validate provider-specific configurations
-	if err := validateConfig(cfg); err != nil {
-		return err
 	}
 
 	return nil
@@ -113,7 +92,7 @@ func Get() *Config {
 // GetProviderAndModel returns the current provider and model as strings
 func (c *Config) GetProviderAndModel() (provider, model string) {
 	provider = c.LLM.Provider
-	
+
 	switch provider {
 	case "anthropic":
 		model = c.LLM.Anthropic.Model
@@ -122,6 +101,6 @@ func (c *Config) GetProviderAndModel() (provider, model string) {
 	default:
 		model = "unknown"
 	}
-	
+
 	return provider, model
 }
