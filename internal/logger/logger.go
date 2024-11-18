@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"github.com/ozankasikci/gitai/internal/config"
 )
 
 var (
@@ -13,29 +14,28 @@ var (
 	Verbose bool
 )
 
-// Init creates new loggers with custom prefixes and writers
-func Init(verbose bool) {
-	Verbose = verbose
+func Init() error {
+	cfg := config.Get()
+	Verbose = cfg.Logger.Verbose
 	
-	// Add color codes for different log levels
-	infoPrefix := "\033[32m[INFO]\033[0m "  // Green
-	errorPrefix := "\033[31m[ERROR]\033[0m " // Red
-	debugPrefix := "\033[34m[DEBUG]\033[0m " // Blue
+	infoPrefix := "\033[32m[INFO]\033[0m "
+	errorPrefix := "\033[31m[ERROR]\033[0m "
+	debugPrefix := "\033[34m[DEBUG]\033[0m "
 
 	flags := log.LstdFlags
 
-	// Create multi-writer for Info to write to both file and stdout
 	Info = log.New(os.Stdout, infoPrefix, flags)
 	Error = log.New(os.Stderr, errorPrefix, flags)
 	
-	// Debug logger only writes if verbose mode is enabled
 	var debugWriter io.Writer
-	if verbose {
+	if cfg.Logger.Verbose {
 		debugWriter = os.Stdout
 	} else {
 		debugWriter = io.Discard
 	}
 	Debug = log.New(debugWriter, debugPrefix, flags)
+	
+	return nil
 }
 
 // Helper functions for consistent logging

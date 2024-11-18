@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	"os"
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/ozankasikci/gitai/internal/config"
 	"github.com/ozankasikci/gitai/internal/logger"
 )
 
@@ -29,12 +29,12 @@ type SuggestionsMsg struct {
 }
 
 func NewClient() (*Client, error) {
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
-	if apiKey == "" {
-		return nil, fmt.Errorf("ANTHROPIC_API_KEY environment variable is not set")
+	cfg := config.Get()
+	if cfg.LLM.APIKey == "" {
+		return nil, fmt.Errorf("LLM API key is not configured")
 	}
 
-	client := anthropic.NewClient(option.WithAPIKey(apiKey))
+	client := anthropic.NewClient(option.WithAPIKey(cfg.LLM.APIKey))
 	return &Client{client: client}, nil
 }
 
@@ -44,9 +44,10 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 	logger.Debugf("\n=== Changes being sent to LLM ===\n%s\n", changes)
 	logger.Debugf("\n=== Full prompt being sent to LLM ===\n%s\n", prompt)
 
+	cfg := config.Get()
 	msg, err := c.client.Messages.New(context.Background(), anthropic.MessageNewParams{
-		Model:     anthropic.F(anthropic.Model("claude-3-5-haiku-latest")),
-		MaxTokens: anthropic.F(int64(1024)),
+		Model:     anthropic.F(anthropic.Model(cfg.LLM.Model)),
+		MaxTokens: anthropic.F(cfg.LLM.MaxTokens),
 		Messages: anthropic.F([]anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		}),
