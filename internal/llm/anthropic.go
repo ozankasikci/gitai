@@ -20,7 +20,7 @@ type CommitMessageGenerator interface {
 	GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error)
 }
 
-type Client struct {
+type AnthropicClient struct {
 	client *anthropic.Client
 }
 
@@ -28,17 +28,17 @@ type SuggestionsMsg struct {
 	Suggestions []CommitSuggestion
 }
 
-func NewClient() (*Client, error) {
+func NewAnthropicClient() (*AnthropicClient, error) {
 	cfg := config.Get()
 	if cfg.LLM.APIKey == "" {
-		return nil, fmt.Errorf("LLM API key is not configured")
+		return nil, fmt.Errorf("Anthropic API key is not configured")
 	}
 
 	client := anthropic.NewClient(option.WithAPIKey(cfg.LLM.APIKey))
-	return &Client{client: client}, nil
+	return &AnthropicClient{client: client}, nil
 }
 
-func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error) {
+func (c *AnthropicClient) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error) {
 	prompt := buildPrompt(changes)
 
 	logger.Debugf("\n=== Changes being sent to LLM ===\n%s\n", changes)

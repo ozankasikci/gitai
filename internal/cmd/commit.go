@@ -86,9 +86,9 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get staged content: %w", err)
 	}
 
-	client, err := llm.NewClient()
+	client, err := llm.NewLLMClient()
 	if err != nil {
-		return fmt.Errorf("failed to initialize LLM client: %w", err)
+		return fmt.Errorf("failed to create LLM client: %w", err)
 	}
 
 	p := tea.NewProgram(initialCommitModel())

@@ -9,9 +9,11 @@ import (
 
 type Config struct {
 	LLM struct {
-		Model     string
-		MaxTokens int64
-		APIKey    string
+		Provider   string
+		APIKey     string
+		OllamaURL  string
+		Model      string
+		MaxTokens  int64
 	}
 	Logger struct {
 		Level   string
@@ -36,17 +38,23 @@ func Init() error {
 
 	// Set defaults
 	viper.SetDefault("llm.model", "claude-3-5-haiku-latest")
-	viper.SetDefault("llm.maxTokens", 1024)
+	viper.SetDefault("llm.maxTokens", int64(1024))
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.verbose", false)
+
+	// Update the default LLM provider configuration
+	viper.SetDefault("llm.provider", "ollama")
+	viper.SetDefault("llm.ollamaURL", "http://localhost:11434")
+	viper.SetDefault("llm.model", "llama2:3.2")
+	viper.SetDefault("llm.maxTokens", int64(1024))
 
 	// Environment variables
 	viper.SetEnvPrefix("GITAI")
 	viper.AutomaticEnv()
 	
-	// Bind specific environment variables
-	viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
-	
+	// Remove or comment out the Anthropic-specific binding since Ollama is now default
+	// viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
+
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return fmt.Errorf("failed to read config file: %w", err)
@@ -58,9 +66,9 @@ func Init() error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// Verify API key is set
-	if cfg.LLM.APIKey == "" {
-		return fmt.Errorf("LLM API key is not configured. Set ANTHROPIC_API_KEY environment variable or in .env file")
+	// Update the API key validation to only check when using Anthropic
+	if cfg.LLM.Provider == "anthropic" && cfg.LLM.APIKey == "" {
+		return fmt.Errorf("Anthropic API key is not configured. Set ANTHROPIC_API_KEY environment variable or in .env file")
 	}
 
 	return nil
