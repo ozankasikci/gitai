@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"github.com/spf13/viper"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -20,6 +22,12 @@ type Config struct {
 var cfg *Config
 
 func Init() error {
+	// Load .env file first
+	if err := godotenv.Load(); err != nil {
+		// Don't return error if .env doesn't exist
+		logrus.Debugf("No .env file found: %v", err)
+	}
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
@@ -33,9 +41,12 @@ func Init() error {
 	viper.SetDefault("logger.verbose", false)
 
 	// Environment variables
-	viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
+	viper.SetEnvPrefix("GITAI")
 	viper.AutomaticEnv()
-
+	
+	// Bind specific environment variables
+	viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
+	
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return fmt.Errorf("failed to read config file: %w", err)
@@ -45,6 +56,11 @@ func Init() error {
 	cfg = &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Verify API key is set
+	if cfg.LLM.APIKey == "" {
+		return fmt.Errorf("LLM API key is not configured. Set ANTHROPIC_API_KEY environment variable or in .env file")
 	}
 
 	return nil
