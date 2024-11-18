@@ -95,11 +95,14 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	
 	// Run LLM in goroutine
 	go func() {
+		logger.Infof("Starting LLM goroutine")
 		suggestions, err := client.GenerateCommitSuggestions(content)
 		if err != nil {
+			logger.Errorf("Error in LLM goroutine: %v", err)
 			p.Send(err)
 			return
 		}
+		logger.Infof("Successfully generated %d suggestions, sending to UI", len(suggestions))
 		p.Send(llm.SuggestionsMsg{Suggestions: suggestions})
 	}()
 

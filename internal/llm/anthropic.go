@@ -62,12 +62,17 @@ func (c *Client) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, 
 		if content.Type == "text" {
 			responseText = content.Text
 			logger.Debugf("\n=== Response from LLM ===\n%s\n", responseText)
+			logger.Debugf("\n=== Raw LLM Response ===\n%#v\n", responseText)
 			break
 		}
 	}
 
+	if responseText == "" {
+		logger.Errorf("No text content found in LLM response")
+		return nil, fmt.Errorf("no text content in response")
+	}
+
 	suggestions := parseResponse(responseText)
-	logger.Debugf("\n=== Parsed Suggestions ===\n")
 	for i, suggestion := range suggestions {
 		logger.Debugf("Suggestion %d:\nMessage: %s\nExplanation: %s\n",
 			i+1, suggestion.Message, suggestion.Explanation)
@@ -86,90 +91,93 @@ Creates a unified message that captures changes across all modified files.
 	
 	Analyze the following git diff and generate 3 different commit messages.
 
-First, carefully analyze the diff:
-- Lines starting with '-' show REMOVED content
-- Lines starting with '+' show ADDED content
-- Context lines (without + or -) show where in the file the change occurs
-- Consider how changes in different files relate to each other
-- Look for common themes or purposes across all changes
-- Create messages that capture the complete scope of changes
+Format each suggestion exactly like this example:
+1 - Add user authentication
+Explanation: Implements basic user authentication
+
+2 - Fix database connection issues
+Explanation: Fixes connection pooling issues
 
 Follow these git commit message rules:
 1. Use imperative mood ("Add" not "Added" or "Adds")
 2. First line should be 50 chars or less
 3. First line should be capitalized
 4. No period at the end of the first line
-5. Leave second line blank
-6. Wrap subsequent lines at 72 characters
 
-Only use these Conventional Commits prefixes when the change clearly fits the category:
-- feat: new feature (entirely new functionality)
-- fix: bug fix (correcting incorrect behavior)
+Optionally, you can use these Conventional Commits prefixes if appropriate:
+- feat: new feature
+- fix: bug fix
 - docs: documentation only
-- style: formatting, missing semi colons, etc
+- style: formatting
 - refactor: code change that neither fixes a bug nor adds a feature
 - test: adding missing tests
 - chore: maintain
 
-If the change doesn't clearly fit into one of these categories, omit the prefix.
-
-Important: Each commit message should cover ALL changes across different files in a single line.
-Do not split changes into separate parts or lines.
-
 Changes:
 %s
 
-Format each suggestion as:
-<number> - <commit message>
-
-Request combined messages.
+Remember to format each suggestion exactly like the example above.
 `, changes)
 }
 
 func parseResponse(response string) []CommitSuggestion {
+	logger.Debugf("\n=== Starting to parse response ===\nFull response text:\n%s\n", response)
 	var suggestions []CommitSuggestion
 	lines := strings.Split(response, "\n")
+	logger.Debugf("Split response into %d lines", len(lines))
 
 	var currentSuggestion *CommitSuggestion
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
+		logger.Debugf("Line %d: '%s'", i+1, line)
+		
 		if line == "" {
+			logger.Debugf("Skipping empty line")
 			continue
 		}
 
-		// Check if this is a new suggestion line (starts with a number)
+		// Check if this is a new suggestion line
 		if len(line) > 2 && line[0] >= '1' && line[0] <= '9' && line[1] == ' ' {
-			// If we have a previous suggestion, add it before starting new one
+			logger.Debugf("Found potential suggestion line: %s", line)
+			
+			// If we have a previous suggestion, add it
 			if currentSuggestion != nil {
+				logger.Debugf("Adding previous suggestion: %+v", *currentSuggestion)
 				suggestions = append(suggestions, *currentSuggestion)
 			}
-			// Extract just the message part after the number and dash
+
+			// Extract message part
 			parts := strings.SplitN(line, "-", 2)
 			if len(parts) == 2 {
+				logger.Debugf("Creating new suggestion with message: %s", parts[1])
 				currentSuggestion = &CommitSuggestion{
 					Message: strings.TrimSpace(parts[1]),
 				}
+			} else {
+				logger.Debugf("Line doesn't match expected format (no dash found)")
 			}
-		} else if currentSuggestion != nil {
-			// Check for explanation or descriptive text markers
+		} else if currentSuggestion != nil && !strings.Contains(line, "Here are three") {
 			lowercaseLine := strings.ToLower(line)
 			if strings.HasPrefix(lowercaseLine, "explanation:") {
-				currentSuggestion.Explanation = strings.TrimSpace(strings.TrimPrefix(line, "Explanation:"))
-			} else if strings.Contains(lowercaseLine, "message captures") ||
-					  strings.Contains(lowercaseLine, "changes show") ||
-					  strings.Contains(lowercaseLine, "the first") ||
-					  strings.Contains(lowercaseLine, "the second") ||
-					  strings.Contains(lowercaseLine, "the third") {
-				// Stop processing message when we hit explanatory text
-				continue
+				explanation := strings.TrimSpace(strings.TrimPrefix(line, "Explanation:"))
+				logger.Debugf("Adding explanation to current suggestion: %s", explanation)
+				currentSuggestion.Explanation = explanation
+			} else {
+				logger.Debugf("Skipping line: not a suggestion or explanation")
 			}
 		}
 	}
 
-	// Add the last suggestion if it exists
+	// Add the last suggestion
 	if currentSuggestion != nil {
+		logger.Debugf("Adding final suggestion: %+v", *currentSuggestion)
 		suggestions = append(suggestions, *currentSuggestion)
 	}
 
+	logger.Debugf("\n=== Parsing complete ===\nFound %d suggestions", len(suggestions))
+	for i, s := range suggestions {
+		logger.Debugf("Suggestion %d: Message='%s', Explanation='%s'", i+1, s.Message, s.Explanation)
+	}
+	
 	return suggestions
 }

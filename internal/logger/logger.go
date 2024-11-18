@@ -36,9 +36,6 @@ func Init(verbose bool) {
 		debugWriter = io.Discard
 	}
 	Debug = log.New(debugWriter, debugPrefix, flags)
-
-	// Log initial state
-	Info.Printf("Logger initialized (verbose: %v)", verbose)
 }
 
 // Helper functions for consistent logging
