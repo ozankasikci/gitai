@@ -11,7 +11,6 @@ import (
 
 // Provider-specific configurations
 type AnthropicConfig struct {
-	APIKey    string
 	Model     string
 	MaxTokens int64
 }
@@ -76,8 +75,8 @@ func Init() error {
 func validateConfig(cfg *Config) error {
 	switch cfg.LLM.Provider {
 	case "anthropic":
-		if cfg.LLM.Anthropic.APIKey == "" {
-			return fmt.Errorf("Anthropic API key is not configured. Set ANTHROPIC_API_KEY environment variable or in .env file")
+		if cfg.LLM.Anthropic.Model == "" {
+			return fmt.Errorf("Anthropic model is not configured")
 		}
 	case "ollama":
 		if cfg.LLM.Ollama.URL == "" {

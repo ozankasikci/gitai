@@ -10,6 +10,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"github.com/ozankasikci/gitai/internal/keyring"
 )
 
 // Setup initializes the application configuration and environment
@@ -117,6 +118,11 @@ func setupAnthropic() error {
 		return fmt.Errorf("failed to get API key: %v", err)
 	}
 
+	// Store API key in keyring
+	if err := keyring.StoreAPIKey(keyring.Anthropic, apiKey); err != nil {
+		return fmt.Errorf("failed to store API key in keyring: %v", err)
+	}
+
 	// Select model
 	model, err := pterm.DefaultInteractiveSelect.
 		WithOptions([]string{
@@ -130,9 +136,8 @@ func setupAnthropic() error {
 		return fmt.Errorf("failed to get model selection: %v", err)
 	}
 
-	// Save to config
+	// Save to config (without API key)
 	cfg := Get()
-	cfg.LLM.Anthropic.APIKey = apiKey
 	cfg.LLM.Anthropic.Model = model
 	cfg.LLM.Anthropic.MaxTokens = 1000 // Set default max tokens
 
@@ -181,11 +186,10 @@ func setupOllama() error {
 // Add this new function to save the config
 func SaveConfig() error {
 	for key, value := range map[string]interface{}{
-		"llm.provider":         cfg.LLM.Provider,
-		"llm.anthropic.apikey": cfg.LLM.Anthropic.APIKey,
-		"llm.anthropic.model":  cfg.LLM.Anthropic.Model,
-		"llm.ollama.url":       cfg.LLM.Ollama.URL,
-		"llm.ollama.model":     cfg.LLM.Ollama.Model,
+		"llm.provider":        cfg.LLM.Provider,
+		"llm.anthropic.model": cfg.LLM.Anthropic.Model,
+		"llm.ollama.url":      cfg.LLM.Ollama.URL,
+		"llm.ollama.model":    cfg.LLM.Ollama.Model,
 	} {
 		viper.Set(key, value)
 	}

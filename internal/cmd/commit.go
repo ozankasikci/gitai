@@ -12,6 +12,7 @@ import (
 	"github.com/ozankasikci/gitai/internal/llm"
 	"github.com/ozankasikci/gitai/internal/logger"
 	"github.com/spf13/cobra"
+	"github.com/pterm/pterm"
 )
 
 type commitModel struct {
@@ -123,7 +124,9 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	for i, suggestion := range suggestions {
 		fmt.Printf("\n%d. %s\n", i+1, suggestion.Message)
 		if suggestion.Explanation != "" {
-			fmt.Printf("   Explanation: %s\n", suggestion.Explanation)
+			pterm.Println()
+			pterm.FgLightCyan.Println("Explanation:")
+			pterm.FgGray.Println(suggestion.Explanation)
 		}
 	}
 

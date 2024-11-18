@@ -9,6 +9,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/ozankasikci/gitai/internal/config"
 	"github.com/ozankasikci/gitai/internal/logger"
+	"github.com/ozankasikci/gitai/internal/keyring"
 )
 
 type CommitSuggestion struct {
@@ -29,12 +30,17 @@ type SuggestionsMsg struct {
 }
 
 func NewAnthropicClient() (*AnthropicClient, error) {
-	cfg := config.Get()
-	if cfg.LLM.Anthropic.APIKey == "" {
+	// Get API key from keyring
+	apiKey, err := keyring.GetAPIKey(keyring.Anthropic)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get API key from keyring: %w", err)
+	}
+
+	if apiKey == "" {
 		return nil, fmt.Errorf("Anthropic API key is not configured")
 	}
 
-	client := anthropic.NewClient(option.WithAPIKey(cfg.LLM.Anthropic.APIKey))
+	client := anthropic.NewClient(option.WithAPIKey(apiKey))
 	return &AnthropicClient{client: client}, nil
 }
 
