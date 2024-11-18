@@ -7,13 +7,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Provider-specific configurations
+type AnthropicConfig struct {
+	APIKey    string
+	Model     string
+	MaxTokens int64
+}
+
+type OllamaConfig struct {
+	URL       string
+	Model     string
+	MaxTokens int64
+}
+
 type Config struct {
 	LLM struct {
-		Provider   string
-		APIKey     string
-		OllamaURL  string
-		Model      string
-		MaxTokens  int64
+		Provider string
+		// Provider-specific configs
+		Anthropic AnthropicConfig
+		Ollama   OllamaConfig
 	}
 	Logger struct {
 		Level   string
@@ -26,7 +38,6 @@ var cfg *Config
 func Init() error {
 	// Load .env file first
 	if err := godotenv.Load(); err != nil {
-		// Don't return error if .env doesn't exist
 		logrus.Debugf("No .env file found: %v", err)
 	}
 
@@ -37,24 +48,28 @@ func Init() error {
 	viper.AddConfigPath("/etc/gitai")
 	viper.AddConfigPath("configs")
 
-	// Set defaults
-	viper.SetDefault("llm.model", "claude-3-5-haiku-latest")
-	viper.SetDefault("llm.maxTokens", int64(1024))
+	// Set defaults for Anthropic
+	viper.SetDefault("llm.anthropic.model", "claude-3-5-haiku-latest")
+	viper.SetDefault("llm.anthropic.maxTokens", int64(1024))
+
+	// Set defaults for Ollama
+	viper.SetDefault("llm.ollama.url", "http://localhost:11434")
+	viper.SetDefault("llm.ollama.model", "llama2:3.2")
+	viper.SetDefault("llm.ollama.maxTokens", int64(1024))
+
+	// Set default provider
+	viper.SetDefault("llm.provider", "ollama")
+
+	// Logger defaults
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.verbose", false)
-
-	// Update the default LLM provider configuration
-	viper.SetDefault("llm.provider", "ollama")
-	viper.SetDefault("llm.ollamaURL", "http://localhost:11434")
-	viper.SetDefault("llm.model", "llama2:3.2")
-	viper.SetDefault("llm.maxTokens", int64(1024))
 
 	// Environment variables
 	viper.SetEnvPrefix("GITAI")
 	viper.AutomaticEnv()
 
 	// Bind specific environment variables
-	viper.BindEnv("llm.apiKey", "ANTHROPIC_API_KEY")
+	viper.BindEnv("llm.anthropic.apiKey", "ANTHROPIC_API_KEY")
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -67,11 +82,27 @@ func Init() error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// Update the API key validation to only check when using Anthropic
-	if cfg.LLM.Provider == "anthropic" && cfg.LLM.APIKey == "" {
-		return fmt.Errorf("Anthropic API key is not configured. Set ANTHROPIC_API_KEY environment variable or in .env file")
+	// Validate provider-specific configurations
+	if err := validateConfig(cfg); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func validateConfig(cfg *Config) error {
+	switch cfg.LLM.Provider {
+	case "anthropic":
+		if cfg.LLM.Anthropic.APIKey == "" {
+			return fmt.Errorf("Anthropic API key is not configured. Set ANTHROPIC_API_KEY environment variable or in .env file")
+		}
+	case "ollama":
+		if cfg.LLM.Ollama.URL == "" {
+			return fmt.Errorf("Ollama URL is not configured")
+		}
+	default:
+		return fmt.Errorf("unsupported LLM provider: %s", cfg.LLM.Provider)
+	}
 	return nil
 }
 

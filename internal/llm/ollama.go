@@ -28,13 +28,13 @@ type ollamaResponse struct {
 
 func NewOllamaClient() (*OllamaClient, error) {
     cfg := config.Get()
-    if cfg.LLM.OllamaURL == "" {
+    if cfg.LLM.Ollama.URL == "" {
         return nil, fmt.Errorf("Ollama URL is not configured")
     }
 
     return &OllamaClient{
-        baseURL: cfg.LLM.OllamaURL,
-        model:   cfg.LLM.Model,
+        baseURL: cfg.LLM.Ollama.URL,
+        model:   cfg.LLM.Ollama.Model,
     }, nil
 }
 

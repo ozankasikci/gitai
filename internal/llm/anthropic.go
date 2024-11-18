@@ -30,11 +30,11 @@ type SuggestionsMsg struct {
 
 func NewAnthropicClient() (*AnthropicClient, error) {
 	cfg := config.Get()
-	if cfg.LLM.APIKey == "" {
+	if cfg.LLM.Anthropic.APIKey == "" {
 		return nil, fmt.Errorf("Anthropic API key is not configured")
 	}
 
-	client := anthropic.NewClient(option.WithAPIKey(cfg.LLM.APIKey))
+	client := anthropic.NewClient(option.WithAPIKey(cfg.LLM.Anthropic.APIKey))
 	return &AnthropicClient{client: client}, nil
 }
 
@@ -46,8 +46,8 @@ func (c *AnthropicClient) GenerateCommitSuggestions(changes string) ([]CommitSug
 
 	cfg := config.Get()
 	msg, err := c.client.Messages.New(context.Background(), anthropic.MessageNewParams{
-		Model:     anthropic.F(anthropic.Model(cfg.LLM.Model)),
-		MaxTokens: anthropic.F(cfg.LLM.MaxTokens),
+		Model:     anthropic.F(anthropic.Model(cfg.LLM.Anthropic.Model)),
+		MaxTokens: anthropic.F(cfg.LLM.Anthropic.MaxTokens),
 		Messages: anthropic.F([]anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		}),

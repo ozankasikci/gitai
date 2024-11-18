@@ -1,10 +1,18 @@
 llm:
-  provider: "ollama"
-  model: "llama3.2"
-  #provider: "anthropic"
-  #model: "claude-3-5-haiku-latest"
-  maxTokens: 1024
+  provider: "anthropic"
+  
+  # Ollama configuration
+  ollama:
+    url: "http://localhost:11434"
+    model: "llama3.2"
+    maxTokens: 1024
+
+  # Anthropic configuration
+  anthropic:
+    model: "claude-3-5-haiku-latest"
+    maxTokens: 1024
+    # apiKey is typically set via environment variable
 
 logger:
-  level: "info"
-  verbose: false 
+  level: "debug"
+  verbose: true 
