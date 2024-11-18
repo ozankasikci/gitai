@@ -35,6 +35,7 @@ func Init() error {
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("$HOME/.gitai")
 	viper.AddConfigPath("/etc/gitai")
+	viper.AddConfigPath("configs")
 
 	// Set defaults
 	viper.SetDefault("llm.model", "claude-3-5-haiku-latest")

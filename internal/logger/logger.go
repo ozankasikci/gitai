@@ -4,7 +4,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"github.com/ozankasikci/gitai/internal/config"
+)
+
+const (
+	infoPrefix  = "\033[32m[INFO]\033[0m "
+	errorPrefix = "\033[31m[ERROR]\033[0m "
+	debugPrefix = "\033[34m[DEBUG]\033[0m "
 )
 
 var (
@@ -14,31 +19,24 @@ var (
 	Verbose bool
 )
 
-func Init() error {
-	cfg := config.Get()
-	Verbose = cfg.Logger.Verbose
+func InitDefault() {
+	flags := log.LstdFlags | log.Lmsgprefix
 	
-	infoPrefix := "\033[32m[INFO]\033[0m "
-	errorPrefix := "\033[31m[ERROR]\033[0m "
-	debugPrefix := "\033[34m[DEBUG]\033[0m "
-
-	flags := log.LstdFlags
-
 	Info = log.New(os.Stdout, infoPrefix, flags)
 	Error = log.New(os.Stderr, errorPrefix, flags)
-	
-	var debugWriter io.Writer
-	if cfg.Logger.Verbose {
-		debugWriter = os.Stdout
-	} else {
-		debugWriter = io.Discard
-	}
-	Debug = log.New(debugWriter, debugPrefix, flags)
-	
-	return nil
+	Debug = log.New(io.Discard, debugPrefix, flags)
+	Verbose = false
 }
 
-// Helper functions for consistent logging
+func UpdateConfig(verbose bool) {
+	Verbose = verbose
+	if verbose {
+		Debug.SetOutput(os.Stdout)
+	} else {
+		Debug.SetOutput(io.Discard)
+	}
+}
+
 func Infof(format string, v ...interface{}) {
 	Info.Printf(format, v...)
 }
@@ -53,7 +51,6 @@ func Debugf(format string, v ...interface{}) {
 	}
 }
 
-// Print functions for when format isn't needed
 func Infoln(v ...interface{}) {
 	Info.Println(v...)
 }

@@ -4,6 +4,7 @@ import (
     "bytes"
     "encoding/json"
     "fmt"
+    "io"
     "net/http"
     
     "github.com/ozankasikci/gitai/internal/config"
@@ -51,15 +52,28 @@ func (c *OllamaClient) GenerateCommitSuggestions(changes string) ([]CommitSugges
         return nil, fmt.Errorf("failed to marshal request: %w", err)
     }
 
+    logger.Debugf("Sending request to Ollama: %s", string(jsonData))
+
     resp, err := http.Post(c.baseURL+"/api/generate", "application/json", bytes.NewBuffer(jsonData))
     if err != nil {
         return nil, fmt.Errorf("failed to send request to Ollama: %w", err)
     }
     defer resp.Body.Close()
 
+    // Add debug logging for raw response
+    rawBody, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read response body: %w", err)
+    }
+    logger.Debugf("Raw Ollama response: %s", string(rawBody))
+
     var ollamaResp ollamaResponse
-    if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
+    if err := json.Unmarshal(rawBody, &ollamaResp); err != nil {
         return nil, fmt.Errorf("failed to decode response: %w", err)
+    }
+
+    if ollamaResp.Response == "" {
+        return nil, fmt.Errorf("empty response from Ollama")
     }
 
     logger.Debugf("\n=== Response from Ollama ===\n%s\n", ollamaResp.Response)

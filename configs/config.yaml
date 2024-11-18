@@ -1,7 +1,7 @@
 llm:
-  model: "claude-3-5-haiku-latest"
+  model: "llama3.2"
   maxTokens: 1024
 
 logger:
   level: "debug"
-  verbose: false 
+  verbose: true 
