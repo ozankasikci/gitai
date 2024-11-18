@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
+
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 // Provider-specific configurations
@@ -25,7 +26,7 @@ type Config struct {
 		Provider string
 		// Provider-specific configs
 		Anthropic AnthropicConfig
-		Ollama   OllamaConfig
+		Ollama    OllamaConfig
 	}
 	Logger struct {
 		Level   string
@@ -61,7 +62,6 @@ func Init() error {
 	viper.SetDefault("llm.provider", "ollama")
 
 	// Logger defaults
-	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.verbose", false)
 
 	// Environment variables
@@ -108,4 +108,4 @@ func validateConfig(cfg *Config) error {
 
 func Get() *Config {
 	return cfg
-} 
+}
