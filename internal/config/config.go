@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/spf13/viper"
 	"github.com/ozankasikci/gitai/internal/logger"
+	"github.com/spf13/viper"
 )
 
 // Provider-specific configurations
@@ -42,6 +42,8 @@ func setupConfigPaths() {
 	viper.SetConfigType("yaml")
 
 	if os.Getenv("GITAI_ENV") == "dev" {
+		viper.SetConfigName("config-dev")
+		viper.SetConfigType("yaml")
 		viper.AddConfigPath("./configs")
 	}
 
@@ -88,9 +90,9 @@ func Init() error {
 
 func InitWithoutSetup() error {
 	logger.Debugln("Starting InitWithoutSetup")
-	
+
 	setupConfigPaths()
-	
+
 	// Initialize empty config
 	cfg = &Config{}
 
