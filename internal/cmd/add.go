@@ -179,6 +179,18 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if finalModel.quitting {
 			return fmt.Errorf("user cancelled")
 		}
+
+		// Add this section to actually stage the files
+		logger.Infof("Proceeding to add the selected files")
+		for idx, selected := range finalModel.selected {
+			if selected {
+				path := finalModel.choices[idx].Path
+				if err := git.StageFile(path); err != nil {
+					return fmt.Errorf("failed to stage file %s: %w", path, err)
+				}
+				logger.Debugf("Staged file: %s", path)
+			}
+		}
 	}
 
 	return nil
