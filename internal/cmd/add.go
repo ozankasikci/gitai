@@ -99,22 +99,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if allStaged {
 					git.RestoreStaged(m.choices[i].Path)
 					m.choices[i].IsStaged = false
+					m.selected[i] = false
 				} else {
 					git.StageFile(m.choices[i].Path)
 					m.choices[i].IsStaged = true
+					m.selected[i] = true
 				}
 			}
 		case " ":
 			currentFile := m.choices[m.cursor].Path
 			if m.choices[m.cursor].IsStaged {
 				git.RestoreStaged(currentFile)
+				m.choices[m.cursor].IsStaged = false
+				m.selected[m.cursor] = false
 			} else {
 				git.StageFile(currentFile)
+				m.choices[m.cursor].IsStaged = true
+				m.selected[m.cursor] = true
 			}
-			m.choices[m.cursor].IsStaged = !m.choices[m.cursor].IsStaged
 			return m, nil
 		case "enter":
 			logger.Infof("Proceeding to add the selected files")
+			for i, choice := range m.choices {
+				m.selected[i] = choice.IsStaged
+			}
 			m.quitting = false
 			return m, tea.Quit
 		}
