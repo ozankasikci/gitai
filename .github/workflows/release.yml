@@ -18,8 +18,12 @@ jobs:
           
       - name: Build
         run: |
-          GOOS=darwin GOARCH=amd64 go build -o bin/gitai-darwin-amd64
-          GOOS=darwin GOARCH=arm64 go build -o bin/gitai-darwin-arm64
+          # Ensure we're in the right directory
+          pwd
+          ls -la
+          # Build for different architectures
+          go build -v -o bin/gitai-darwin-amd64 ./cmd/gitai
+          GOARCH=arm64 go build -v -o bin/gitai-darwin-arm64 ./cmd/gitai
           
       - name: Create universal binary
         run: lipo -create -output bin/gitai-darwin-universal bin/gitai-darwin-amd64 bin/gitai-darwin-arm64
