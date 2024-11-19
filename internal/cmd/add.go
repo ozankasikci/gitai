@@ -114,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.choices[m.cursor].IsStaged = !m.choices[m.cursor].IsStaged
 			return m, nil
 		case "enter":
-			logger.Infof("Enter key pressed, completing add operation")
+			logger.Infof("Proceeding to add the selected files")
 			m.quitting = false
 			return m, tea.Quit
 		}
@@ -176,12 +176,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Check if the user quit
 	if m != nil {
 		finalModel := m.(model)
-		logger.Infof("Add UI finished. Quitting: %v", finalModel.quitting)
 		if finalModel.quitting {
 			return fmt.Errorf("user cancelled")
 		}
 	}
 
-	logger.Infof("runAdd completed successfully")
 	return nil
 } 

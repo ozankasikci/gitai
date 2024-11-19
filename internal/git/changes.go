@@ -31,8 +31,6 @@ type FileChange struct {
 
 // GetStagedChanges returns a list of files that are staged for commit
 func GetStagedChanges() ([]StagedChange, error) {
-	logger.Infof("Getting staged changes...")
-
 	repo, err := git.PlainOpen(".")
 	if err != nil {
 		logger.Errorf("Failed to open git repository: %v", err)
@@ -56,7 +54,7 @@ func GetStagedChanges() ([]StagedChange, error) {
 	var changes []StagedChange
 	for path, fileStatus := range status {
 		if fileStatus.Staging != git.Unmodified && fileStatus.Staging != git.Untracked ||
-		   fileStatus.Worktree == git.Deleted {
+			fileStatus.Worktree == git.Deleted {
 			logger.Debugf("Found staged file: %s (status: %s)", path, statusToString(fileStatus.Staging))
 			change := StagedChange{
 				Path:   path,
@@ -69,7 +67,6 @@ func GetStagedChanges() ([]StagedChange, error) {
 		}
 	}
 
-	logger.Infof("Found %d staged changes", len(changes))
 	return changes, nil
 }
 
@@ -111,7 +108,7 @@ func GetStagedContent() (string, error) {
 	}
 
 	var content strings.Builder
-	
+
 	// First add the summary of changes
 	content.WriteString("=== Changes Summary ===\n\n")
 	for _, change := range changes {
@@ -135,7 +132,7 @@ func GetStagedContent() (string, error) {
 	}
 
 	content.WriteString("\n=== Detailed Changes ===\n")
-	
+
 	// Get the actual diff for each staged file
 	for _, change := range changes {
 		if change.Status == "deleted" {
