@@ -15,4 +15,4 @@ llm:
     # apiKey is typically set via environment variable
 
 logger:
-  verbose: false 
+  verbose: true 
