@@ -3,13 +3,14 @@ package llm
 import (
 	"context"
 	"fmt"
-	"github.com/anthropics/anthropic-sdk-go/option"
 	"strings"
+
+	"github.com/anthropics/anthropic-sdk-go/option"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/ozankasikci/gitai/internal/config"
-	"github.com/ozankasikci/gitai/internal/logger"
 	"github.com/ozankasikci/gitai/internal/keyring"
+	"github.com/ozankasikci/gitai/internal/logger"
 )
 
 type CommitSuggestion struct {
@@ -35,7 +36,6 @@ func NewAnthropicClient() (*AnthropicClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get API key from keyring: %w", err)
 	}
-	logger.Infof("Anthropic API key: %s", apiKey)
 
 	if apiKey == "" {
 		return nil, fmt.Errorf("Anthropic API key is not configured")
@@ -47,10 +47,10 @@ func NewAnthropicClient() (*AnthropicClient, error) {
 
 func (c *AnthropicClient) GenerateCommitSuggestions(changes string) ([]CommitSuggestion, error) {
 	logger.Debugf("\n=== Input changes string ===\nLength: %d\nContent:\n%s\n", len(changes), changes)
-	
+
 	// Format the changes to include both summary and diff content
 	formattedChanges := "=== File Changes Summary ===\n"
-	
+
 	// First, extract and format the file status lines
 	logger.Debugf("\n=== Processing file status lines ===\n")
 	for _, line := range strings.Split(changes, "\n") {
@@ -59,13 +59,13 @@ func (c *AnthropicClient) GenerateCommitSuggestions(changes string) ([]CommitSug
 			formattedChanges += line + "\n"
 		}
 	}
-	
+
 	// Then add the full diff content with clear separation
 	formattedChanges += "\n=== Git Diff Content ===\n"
 	formattedChanges += changes
 
 	prompt := buildPrompt(formattedChanges)
-	
+
 	logger.Debugf("\n=== Final formatted changes ===\n%s\n", formattedChanges)
 	logger.Debugf("\n=== Full prompt being sent to LLM ===\n%s\n", prompt)
 
@@ -155,4 +155,3 @@ Changes:
 Remember to format each suggestion exactly like the example above.
 `, changes)
 }
-
