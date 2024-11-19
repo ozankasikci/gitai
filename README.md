@@ -2,6 +2,10 @@
 
 git-ai is an AI-powered Git assistant that helps automate and enhance your Git workflow. It uses AI to analyze your code changes and generate meaningful commit messages, making version control more efficient and consistent.
 
+Currently, it supports the following providers:
+- Anthropic Claude
+- Ollama
+
 ## Features
 
 - Interactive file staging
