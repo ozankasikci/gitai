@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
-	"github.com/ozankasikci/gitai/internal/logger"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -15,9 +14,6 @@ import (
 
 // Setup initializes the application configuration and environment
 func Setup() error {
-	// Initialize logger first
-	logger.InitDefault()
-
 	// Clear existing configuration
 	if err := clearConfig(); err != nil {
 		return fmt.Errorf("failed to clear existing configuration: %v", err)

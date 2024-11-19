@@ -105,30 +105,23 @@ func FormatChangesForPrompt(changes []StagedChange) string {
 
 // GetStagedContent returns a summary of the staged changes
 func GetStagedContent() (string, error) {
-	// Get list of staged files first
-	cmd := exec.Command("git", "diff", "--staged", "--name-only")
-	files, err := cmd.Output()
+	changes, err := GetStagedChanges()
 	if err != nil {
-		return "", fmt.Errorf("failed to get staged files: %w", err)
+		return "", fmt.Errorf("failed to get staged changes: %w", err)
 	}
 
-	var allDiffs strings.Builder
-	allDiffs.WriteString("=== Changes across multiple files ===\n\n")
+	var content strings.Builder
+	content.WriteString("=== Changes across multiple files ===\n\n")
 
-	// Get diff for each file
-	for _, file := range strings.Split(strings.TrimSpace(string(files)), "\n") {
-		cmd := exec.Command("git", "diff", "--staged", file)
-		diff, err := cmd.Output()
-		if err != nil {
+	for _, change := range changes {
+		if change.Status == "deleted" {
+			content.WriteString(fmt.Sprintf("Deleted file: %s\n", change.Path))
 			continue
 		}
-		
-		allDiffs.WriteString(fmt.Sprintf("=== Changes in %s ===\n", file))
-		allDiffs.WriteString(string(diff))
-		allDiffs.WriteString("\n")
+		// ... rest of the existing content gathering logic
 	}
 
-	return allDiffs.String(), nil
+	return content.String(), nil
 }
 
 // CommitChanges commits the staged changes with the given message
@@ -311,9 +304,16 @@ func GetAllChanges() ([]FileChange, error) {
 
 	var changes []FileChange
 	for path, fileStatus := range status {
+		var statusStr string
+		if fileStatus.Staging == git.Deleted || fileStatus.Worktree == git.Deleted {
+			statusStr = "deleted"
+		} else {
+			statusStr = statusToString(fileStatus.Worktree)
+		}
+
 		change := FileChange{
 			Path:   path,
-			Status: statusToString(fileStatus.Worktree),
+			Status: statusStr,
 			Staged: fileStatus.Staging != git.Unmodified,
 		}
 		changes = append(changes, change)

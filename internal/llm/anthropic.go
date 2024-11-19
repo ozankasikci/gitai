@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/ozankasikci/gitai/internal/config"
@@ -91,13 +90,18 @@ func (c *AnthropicClient) GenerateCommitSuggestions(changes string) ([]CommitSug
 
 func buildPrompt(changes string) string {
 	return fmt.Sprintf(`
-	You are a highly intelligent assistant skilled in understanding code changes. I will provide you with a git diff. Your task is to analyze the changes and generate a concise and descriptive commit message that:
+You are a highly intelligent assistant skilled in understanding code changes. I will provide you with a git diff. Your task is to analyze the changes and generate a concise and descriptive commit message that:
 
 Summarizes the purpose of the changes.
-Highlights any key modifications or additions.
+Highlights any key modifications, additions, or deletions.
 Creates a unified message that captures changes across all modified files.
-	
-	Analyze the following git diff and generate 3 different commit messages.
+
+Pay special attention to:
+- Deleted files (marked as "deleted" or removed)
+- Added files (new files)
+- Modified files (changed content)
+
+Analyze the following git diff and generate 3 different commit messages.
 
 Format each suggestion exactly like this example:
 1 - Add user authentication
@@ -128,64 +132,3 @@ Remember to format each suggestion exactly like the example above.
 `, changes)
 }
 
-func parseResponse(response string) []CommitSuggestion {
-	logger.Debugf("\n=== Starting to parse response ===\nFull response text:\n%s\n", response)
-	var suggestions []CommitSuggestion
-	lines := strings.Split(response, "\n")
-	logger.Debugf("Split response into %d lines", len(lines))
-
-	var currentSuggestion *CommitSuggestion
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		logger.Debugf("Line %d: '%s'", i+1, line)
-		
-		if line == "" {
-			logger.Debugf("Skipping empty line")
-			continue
-		}
-
-		// Check if this is a new suggestion line
-		if len(line) > 2 && line[0] >= '1' && line[0] <= '9' && line[1] == ' ' {
-			logger.Debugf("Found potential suggestion line: %s", line)
-			
-			// If we have a previous suggestion, add it
-			if currentSuggestion != nil {
-				logger.Debugf("Adding previous suggestion: %+v", *currentSuggestion)
-				suggestions = append(suggestions, *currentSuggestion)
-			}
-
-			// Extract message part
-			parts := strings.SplitN(line, "-", 2)
-			if len(parts) == 2 {
-				logger.Debugf("Creating new suggestion with message: %s", parts[1])
-				currentSuggestion = &CommitSuggestion{
-					Message: strings.TrimSpace(parts[1]),
-				}
-			} else {
-				logger.Debugf("Line doesn't match expected format (no dash found)")
-			}
-		} else if currentSuggestion != nil && !strings.Contains(line, "Here are three") {
-			lowercaseLine := strings.ToLower(line)
-			if strings.HasPrefix(lowercaseLine, "explanation:") {
-				explanation := strings.TrimSpace(strings.TrimPrefix(line, "Explanation:"))
-				logger.Debugf("Adding explanation to current suggestion: %s", explanation)
-				currentSuggestion.Explanation = explanation
-			} else {
-				logger.Debugf("Skipping line: not a suggestion or explanation")
-			}
-		}
-	}
-
-	// Add the last suggestion
-	if currentSuggestion != nil {
-		logger.Debugf("Adding final suggestion: %+v", *currentSuggestion)
-		suggestions = append(suggestions, *currentSuggestion)
-	}
-
-	logger.Debugf("\n=== Parsing complete ===\nFound %d suggestions", len(suggestions))
-	for i, s := range suggestions {
-		logger.Debugf("Suggestion %d: Message='%s', Explanation='%s'", i+1, s.Message, s.Explanation)
-	}
-	
-	return suggestions
-}

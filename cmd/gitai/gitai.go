@@ -23,6 +23,10 @@ func main() {
 	// Set up config paths first
 	config.InitWithoutSetup()
 
+	logger.UpdateConfig(config.Get().Logger.Verbose)
+
+	logger.Debugf("Verbose: %t", config.Get().Logger.Verbose)
+
 	// Check if we're running config setup command
 	isConfigSetup := len(os.Args) > 2 && os.Args[1] == "config" && os.Args[2] == "setup"
 

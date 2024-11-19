@@ -29,12 +29,15 @@ func InitDefault() {
 }
 
 func UpdateConfig(verbose bool) {
+	println("UpdateConfig")
+	println(verbose)
 	Verbose = verbose
 	if verbose {
 		Debug.SetOutput(os.Stdout)
 	} else {
 		Debug.SetOutput(io.Discard)
 	}
+	println(Verbose)
 }
 
 func Infof(format string, v ...interface{}) {
@@ -60,6 +63,8 @@ func Errorln(v ...interface{}) {
 }
 
 func Debugln(v ...interface{}) {
+	println("Debugln")
+	println(Verbose)
 	if Verbose {
 		Debug.Println(v...)
 	}
