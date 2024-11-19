@@ -3,9 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"github.com/spf13/cobra"
-	"github.com/ozankasikci/gitai/internal/logger"
+
 	"github.com/ozankasikci/gitai/internal/config"
+	"github.com/ozankasikci/gitai/internal/logger"
+	"github.com/spf13/cobra"
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -36,7 +37,6 @@ func init() {
 	RootCmd.AddCommand(
 		NewAddCommand(),
 		NewCommitCommand(),
-		NewGitignoreCommand(),
 		NewAutoCommand(),
 		NewConfigCommand(),
 	)
@@ -48,4 +48,4 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-} 
+}
