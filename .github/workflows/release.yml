@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+          
+      - name: Build
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o bin/gitai-darwin-amd64
+          GOOS=darwin GOARCH=arm64 go build -o bin/gitai-darwin-arm64
+          
+      - name: Create universal binary
+        run: lipo -create -output bin/gitai-darwin-universal bin/gitai-darwin-amd64 bin/gitai-darwin-arm64
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            bin/gitai-darwin-universal
+            bin/gitai-darwin-amd64
+            bin/gitai-darwin-arm64 
