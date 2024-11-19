@@ -12,17 +12,27 @@ git-ai is an AI-powered Git assistant that helps automate and enhance your Git w
 
 ## Installation
 
-### macOS
+### Pre-built Binaries
 
-Download the latest release for your architecture:
-
-- [Universal Binary (Intel & Apple Silicon)](https://github.com/ozankasikci/gitai/releases/latest/download/gitai-darwin-universal)
-- [Intel Mac (x86_64)](https://github.com/ozankasikci/gitai/releases/latest/download/gitai-darwin-amd64)
-- [Apple Silicon (M1/M2)](https://github.com/ozankasikci/gitai/releases/latest/download/gitai-darwin-arm64)
-
+#### macOS Universal Binary (Intel & Apple Silicon)
 ```bash
-chmod +x gitai-darwin-
-sudo mv gitai-darwin- /usr/local/bin/gitai
+curl -LO https://github.com/ozankasikci/gitai/releases/latest/download/gitai-darwin-universal
+chmod +x gitai-darwin-universal
+sudo mv gitai-darwin-universal /usr/local/bin/gitai
+```
+
+#### macOS Intel (x86_64)
+```bash
+curl -LO https://github.com/ozankasikci/gitai/releases/latest/download/gitai-darwin-x86_64
+chmod +x gitai-darwin-x86_64
+sudo mv gitai-darwin-x86_64 /usr/local/bin/gitai
+```
+
+#### macOS Apple Silicon (M1/M2)
+```bash
+curl -LO https://github.com/ozankasikci/gitai/releases/latest/download/gitai-darwin-arm64
+chmod +x gitai-darwin-arm64
+sudo mv gitai-darwin-arm64 /usr/local/bin/gitai
 ```
 
 ### Build from source
