@@ -20,7 +20,7 @@ var (
 )
 
 func InitDefault() {
-	flags := log.LstdFlags | log.Lmsgprefix
+	flags := log.Lmsgprefix
 
 	Info = log.New(os.Stdout, infoPrefix, flags)
 	Error = log.New(os.Stderr, errorPrefix, flags)
