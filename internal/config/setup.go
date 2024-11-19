@@ -18,6 +18,11 @@ func Setup() error {
 	// Initialize logger first
 	logger.InitDefault()
 
+	// Clear existing configuration
+	if err := clearConfig(); err != nil {
+		return fmt.Errorf("failed to clear existing configuration: %v", err)
+	}
+
 	// First initialize config
 	if err := Init(); err != nil {
 		return fmt.Errorf("failed to initialize config: %v", err)
@@ -201,4 +206,28 @@ func SaveConfig() error {
 
 	viper.SetConfigFile(filepath.Join(configDir, "config.yaml"))
 	return viper.WriteConfig()
+}
+
+// ClearConfig removes existing configuration
+func clearConfig() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user home directory: %v", err)
+	}
+
+	configDir := filepath.Join(home, ".config", "gitai")
+	configFile := filepath.Join(configDir, "config.yaml")
+	envFile := filepath.Join(configDir, ".env")
+
+	// Remove config file if it exists
+	if err := os.Remove(configFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove config file: %v", err)
+	}
+
+	// Remove env file if it exists
+	if err := os.Remove(envFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove env file: %v", err)
+	}
+
+	return nil
 }

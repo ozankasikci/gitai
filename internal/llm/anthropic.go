@@ -35,6 +35,7 @@ func NewAnthropicClient() (*AnthropicClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get API key from keyring: %w", err)
 	}
+	logger.Infof("Anthropic API key: %s", apiKey)
 
 	if apiKey == "" {
 		return nil, fmt.Errorf("Anthropic API key is not configured")

@@ -5,6 +5,7 @@ import (
 	"os"
 	"github.com/spf13/cobra"
 	"github.com/ozankasikci/gitai/internal/logger"
+	"github.com/ozankasikci/gitai/internal/config"
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -14,8 +15,18 @@ var RootCmd = &cobra.Command{
 	Long: `GitAI is a command-line tool that uses AI to help with Git operations.
 Currently supports generating commit messages based on staged changes.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Initialize logger before any command runs
+		// Only initialize logger, not the full config
 		logger.InitDefault()
+
+		// Skip config initialization for config commands
+		if cmd.Parent() != nil && cmd.Parent().Name() == "config" {
+			return nil
+		}
+
+		// Initialize config for other commands
+		if err := config.Init(); err != nil {
+			return fmt.Errorf("failed to initialize config: %w", err)
+		}
 		return nil
 	},
 }
@@ -27,6 +38,7 @@ func init() {
 		NewCommitCommand(),
 		NewGitignoreCommand(),
 		NewAutoCommand(),
+		NewConfigCommand(),
 	)
 }
 

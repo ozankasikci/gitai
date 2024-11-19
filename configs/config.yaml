@@ -1,6 +1,6 @@
 llm:
-  #provider: "anthropic"
-  provider: "ollama"
+  provider: "anthropic"
+  #provider: "ollama"
   
   # Ollama configuration
   ollama:
