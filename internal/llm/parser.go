@@ -32,14 +32,17 @@ func parseResponse(response string) []CommitSuggestion {
 			// Start new suggestion
 			currentSuggestion = &CommitSuggestion{}
 			
-			// Remove the number prefix and any dots/dashes
-			parts := strings.SplitN(line, ".", 2)
-			if len(parts) > 1 {
-				message := strings.TrimSpace(parts[1])
-				if strings.HasPrefix(message, "-") {
-					message = strings.TrimSpace(strings.TrimPrefix(message, "-"))
+			// Extract message part
+			if strings.Contains(line, " - ") {
+				parts := strings.SplitN(line, " - ", 2)
+				if len(parts) == 2 {
+					currentSuggestion.Message = strings.TrimSpace(parts[1])
 				}
-				currentSuggestion.Message = message
+			} else if strings.Contains(line, ". ") {
+				parts := strings.SplitN(line, ". ", 2)
+				if len(parts) == 2 {
+					currentSuggestion.Message = strings.TrimSpace(parts[1])
+				}
 			}
 			
 			logger.Debugf("Created new suggestion with message: %s", currentSuggestion.Message)

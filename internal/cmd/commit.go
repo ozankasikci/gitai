@@ -86,6 +86,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get staged content: %w", err)
 	}
+	logger.Debugf("\n=== Staged content from git.GetStagedContent() ===\nLength: %d\nContent:\n%s\n", len(content), content)
 
 	client, err := llm.NewLLMClient()
 	if err != nil {
@@ -97,6 +98,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	// Run LLM in goroutine
 	go func() {
 		logger.Infof("Starting LLM goroutine")
+		logger.Debugf("\n=== Content being sent to GenerateCommitSuggestions ===\n%s\n", content)
 		suggestions, err := client.GenerateCommitSuggestions(content)
 		if err != nil {
 			logger.Errorf("Error in LLM goroutine: %v", err)

@@ -111,17 +111,66 @@ func GetStagedContent() (string, error) {
 	}
 
 	var content strings.Builder
-	content.WriteString("=== Changes across multiple files ===\n\n")
+	
+	// First add the summary of changes
+	content.WriteString("=== Changes Summary ===\n\n")
+	for _, change := range changes {
+		content.WriteString(fmt.Sprintf("%s (status: %s)\n", change.Path, change.Status))
+	}
 
+	// Then add the actual diff content
+	repo, err := git.PlainOpen(".")
+	if err != nil {
+		return "", fmt.Errorf("failed to open git repository: %w", err)
+	}
+
+	w, err := repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	_, err = w.Status()
+	if err != nil {
+		return "", fmt.Errorf("failed to get status: %w", err)
+	}
+
+	content.WriteString("\n=== Detailed Changes ===\n")
+	
+	// Get the actual diff for each staged file
 	for _, change := range changes {
 		if change.Status == "deleted" {
-			content.WriteString(fmt.Sprintf("Deleted file: %s\n", change.Path))
+			content.WriteString(fmt.Sprintf("\nDeleted file: %s\n", change.Path))
 			continue
 		}
-		// ... rest of the existing content gathering logic
+
+		diff, err := getDiffForFile(repo, change.Path)
+		if err != nil {
+			return "", fmt.Errorf("failed to get diff for %s: %w", change.Path, err)
+		}
+		content.WriteString(fmt.Sprintf("\n=== %s ===\n%s\n", change.Path, diff))
 	}
 
 	return content.String(), nil
+}
+
+func getDiffForFile(repo *git.Repository, path string) (string, error) {
+	// Use git command to get diff since go-git's diff functionality is limited
+	cmd := exec.Command("git", "diff", "--cached", "--", path)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get diff for %s: %w", path, err)
+	}
+
+	if len(output) == 0 {
+		// If no diff (e.g., for newly added files), get the entire content
+		cmd = exec.Command("git", "show", ":"+path)
+		output, err = cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("failed to get content for %s: %w", path, err)
+		}
+	}
+
+	return string(output), nil
 }
 
 // CommitChanges commits the staged changes with the given message
