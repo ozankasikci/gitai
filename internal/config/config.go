@@ -40,12 +40,8 @@ var cfg *Config
 func setupConfigPaths() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	logger.Infof("Setting config name to config")
-	logger.Infof("GITAI_ENV: %s", os.Getenv("GITAI_ENV"))
-	logger.Infof("Is dev: %t", os.Getenv("GITAI_ENV") == "dev")
 
 	if os.Getenv("GITAI_ENV") == "dev" {
-		logger.Infof("Adding configs directory to config path")
 		viper.AddConfigPath("./configs")
 	}
 

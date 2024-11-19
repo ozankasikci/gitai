@@ -18,8 +18,6 @@ func NewAutoCommand() *cobra.Command {
 }
 
 func runAuto(cmd *cobra.Command, args []string) error {
-	logger.Infof("Starting runAuto...")
-	
 	// First run the add command
 	if err := runAdd(cmd, args); err != nil {
 		logger.Errorf("Error from runAdd: %v", err)

@@ -157,7 +157,6 @@ func NewAddCommand() *cobra.Command {
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	logger.Infof("Starting runAdd...")
 	changes, err := git.GetAllChanges()
 	if err != nil {
 		return fmt.Errorf("failed to get changes: %w", err)
